@@ -1,22 +1,22 @@
 """
 阶段1：第一条 LCEL 管道
 chain = prompt | llm | output_parser
+
+
+阶段二：tool定义
+
+阶段三： create_react_agent 一条龙
 """
-
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from langchain_deepseek.chat_models import ChatDeepSeek
+from langgraph.checkpoint.memory import MemorySaver #导入记忆模块
+from langchain.agents import create_agent
+from langchain_core.messages import SystemMessage
 from langchain_openai import ChatOpenAI
+
 from src.utlist.config import get_config
+from src.tools.tools import ALL_TOOLS
 
-from langchain_core.prompts import ChatMessagePromptTemplate, MessagesPlaceholder
-#1. prompt模板
-prompt = ChatPromptTemplate.from_messages([
-    ("system","你是一个有用的助手，请用中文回答，尽量简洁不啰嗦。"),
-    MessagesPlaceholder(variable_name="messages")
-])
 
-#2 LLM
+#1 LLM 
 config = get_config()
 llm = ChatOpenAI(
     model=config.model_name,
@@ -25,36 +25,33 @@ llm = ChatOpenAI(
     temperature=config.temperature,
 )
 
-#3 输出解析器，将ai输出转化为字符串
-parser = StrOutputParser()
+#Memory（跨轮记忆，thread_id隔离不同的用户）
+memory = MemorySaver()
 
-#4 管道串联
-chain = prompt | llm | parser
+agent = create_agent(
+    model=llm,
+    tools=ALL_TOOLS,
+    checkpointer=memory,
+    system_prompt="你是一个有用的助手，用中文回答，尽量简洁。"
+)
 
-#5 运行
+#运行
 if __name__ == "__main__":
-
-    #对话历史
-    messages = []
+    thread = {"configurable":{"thread_id":"user-1"}}
 
     while True:
-        user_input = input("you>")
-
-        #把用户消息加入历史
-        messages.append(("human",user_input))        
-
-        if user_input.lower() in ("quit","exit","q"):
+        user_input = input("you>>")
+        if user_input.lower() in ("q","quit","exit"):
             print("再见")
             break
 
-
-        print("Agent:>", end="", flush=True)
-        full_response = ""
-
-        for chunk in chain.stream({"messages":messages}):
-            print(chunk, end="", flush=True)
-            full_response += chunk
+        #流式输出
+        stream_model = "messages"
+        for chunk,metadata in agent.stream(
+            {"messages":[("human",user_input)]},
+            config=thread,
+            stream_mode="messages",
+        ):
+           if hasattr(chunk, "content") and chunk.content:
+               print(chunk.content, end="", flush=True)
         print()
-
-        #把ai回复加入历史
-        messages.append(("assistant", full_response))

@@ -128,7 +128,7 @@ ToolMessage      # 工具执行结果（关联 tool_call_id）
 ```python
 from langgraph.prebuilt import create_react_agent
 
-agent = create_react_agent(
+agent = create_agent(
     model=llm,
     tools=[calculator, get_time],
     checkpointer=MemorySaver(),              # 记忆持久化
@@ -208,7 +208,7 @@ Prompt ──→  Agent ──→  ReAct 循环
 ```
 阶段1  环境搭建 + Chain 管道     → prompt | llm 跑通
 阶段2  注册 Tool                → llm.bind_tools()
-阶段3  组装 Agent               → create_react_agent()
+阶段3  组装 Agent               → create_agent()
 阶段4  添加 Memory              → SqliteSaver 持久化
 阶段5  接入 RAG                 → 文档加载 → 向量存储 → 检索增强
 阶段6  进阶：多 Agent / LangGraph → 多 Agent 协作
