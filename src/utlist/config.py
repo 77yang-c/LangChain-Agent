@@ -12,6 +12,7 @@ class Config:
     openai_api_key : str = ""
     base_url : str = ""
     temperature : float = 0.0
+    cwd: str = os.getcwd()
 
 def get_config() -> Config:
     return Config(

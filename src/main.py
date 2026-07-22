@@ -11,6 +11,7 @@ from langgraph.checkpoint.memory import MemorySaver #导入记忆模块
 from langchain.agents import create_agent
 from langchain_core.messages import SystemMessage
 from langchain_openai import ChatOpenAI
+from langchain_core.messages import AIMessage, AIMessageChunk
 
 from src.utlist.config import get_config
 from src.tools.tools import ALL_TOOLS
@@ -32,9 +33,10 @@ agent = create_agent(
     model=llm,
     tools=ALL_TOOLS,
     checkpointer=memory,
-    system_prompt="你是一个有用的助手，用中文回答，尽量简洁。"
+    system_prompt="你是一个有用的助手，用中文回答，尽量简洁。",
 )
 
+import signal
 #运行
 if __name__ == "__main__":
     thread = {"configurable":{"thread_id":"user-1"}}
@@ -52,6 +54,12 @@ if __name__ == "__main__":
             config=thread,
             stream_mode="messages",
         ):
-           if hasattr(chunk, "content") and chunk.content:
+           if isinstance(chunk , (AIMessageChunk)):
+               if hasattr(chunk, "tool_calls") and chunk.tool_calls:
+                   for tc in chunk.tool_calls:
+                       if tc.get("name"):
+                            print(f"正在调用工具：{tc['name']}")
+                            print("\n")
+           if isinstance(chunk, (AIMessage, AIMessageChunk)) and chunk.content:
                print(chunk.content, end="", flush=True)
-        print()
+        print("\n")
