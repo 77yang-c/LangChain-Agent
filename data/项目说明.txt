@@ -1,0 +1,18 @@
+LangChain Agent 项目的部署方式：
+1. 克隆项目到本地
+2. 执行 pip install -r requirements.txt
+3. 复制 .env.example 为 .env，填入 API Key
+4. 运行 python -m src.main
+
+项目技术栈：
+- Python 3.13
+- LangChain 作为 Agent 框架
+- DeepSeek 作为 LLM
+- ChromaDB 作为向量数据库
+- Playwright 用于浏览器自动化
+
+开发规范：
+- 每个功能模块文件不超过 200 行
+- 工具函数必须有 docstring
+- 环境变量统一通过 config.py 读取
+- 所有异步操作采用同步方式实现

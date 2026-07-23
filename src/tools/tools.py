@@ -17,6 +17,8 @@ def read_file(path: str) -> str:
     if not p.is_absolute():
         p = Path.cwd()/p
     p = p.resolve()
+    if not p.exists():
+        return f"文件不存在：{p}"
     return p.read_text(encoding="utf-8", errors="replace")[:60000]
 
 @tool
@@ -42,9 +44,13 @@ def web_tool_read(url : str)->str:
         b.close()
         return text[:8000]
 
+
+from src.tools.rag import search_docs
+
     
 ALL_TOOLS = [get_current_time,
              read_file,
              write_file,
-             web_tool_read
+             web_tool_read,
+             search_docs
         ]

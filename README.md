@@ -213,3 +213,108 @@ Prompt ──→  Agent ──→  ReAct 循环
 阶段5  接入 RAG                 → 文档加载 → 向量存储 → 检索增强
 阶段6  进阶：多 Agent / LangGraph → 多 Agent 协作
 ```
+
+## 部署步骤
+
+### 1. 环境要求
+
+- **Python 3.10+**
+- 建议使用虚拟环境
+
+### 2. 创建虚拟环境 & 安装依赖
+
+```bash
+# 进入项目目录
+cd langchain-agent
+
+# 创建虚拟环境
+python -m venv venv
+
+# 激活虚拟环境
+# Windows:
+venv\Scripts\activate
+# macOS/Linux:
+source venv/bin/activate
+
+# 安装依赖
+pip install -r requirements.txt
+```
+
+### 3. 安装 Playwright 浏览器
+
+`web_tool_read` 工具依赖 Playwright 驱动 Chromium：
+
+```bash
+playwright install chromium
+```
+
+### 4. 配置环境变量
+
+编辑项目根目录的 `.env` 文件：
+
+```env
+OPENAI_API_KEY=你的API_KEY
+MODEL_NAME=deepseek-v4-pro        # 或其他兼容 OpenAI 协议的模型
+BASE_URL=https://api.deepseek.com  # API 地址
+TEMPERATURE=0.0                    # 可选，默认 0
+```
+
+当前已配置的是 DeepSeek API，你也可以换成其他兼容 OpenAI 接口的提供商。
+
+### 5. 运行
+
+```bash
+python src/main.py
+```
+
+进入交互循环后：
+
+```
+you>> 现在几点了？
+正在调用工具：get_current_time
+2025-01-15 14:30:00
+
+you>> q    # 输入 q / quit / exit 退出
+再见
+```
+
+---
+
+## 项目架构速览
+
+```
+用户输入 → main.py (交互循环)
+              ↓
+         agent.py (create_react_agent)
+              ↓
+    ┌─────────┼─────────┐
+   LLM      Tools     Memory
+(DeepSeek) (get_current_time,  (MemorySaver)
+           read_file,
+           write_file,
+           web_tool_read)
+```
+
+| 文件 | 职责 |
+|------|------|
+| `src/main.py` | 入口，交互式对话循环 + 流式输出 |
+| `src/agent/agent.py` | `create_react_agent` 封装 |
+| `src/tools/tools.py` | 四个工具：时间、文件读写、网页抓取 |
+| `src/utlist/config.py` | 加载 `.env` 配置 |
+| `src/memory/memory.py` | 对话记忆持久化 |
+| `src/prompts/prompts.py` | 系统提示词模板 |
+
+---
+
+## 常见问题
+
+| 问题 | 解决 |
+|------|------|
+| `ModuleNotFoundError: src.utlist` | 确保在项目根目录运行 `python src/main.py` |
+| Playwright 报错 | 执行 `playwright install chromium` |
+| API 连接失败 | 检查 `.env` 中的 `BASE_URL` 和 `API_KEY` 是否正确 |
+| Chromium 启动失败 | Linux 服务器需安装依赖：`playwright install-deps chromium` |
+
+---
+
+**总结：** 本质就是一个 Python 脚本项目，核心三步：`pip install -r requirements.txt` → 配置 `.env` → `python src/main.py`。如果没有其他问题，可以直接跑起来了！

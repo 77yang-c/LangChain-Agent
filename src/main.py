@@ -33,7 +33,23 @@ agent = create_agent(
     model=llm,
     tools=ALL_TOOLS,
     checkpointer=memory,
-    system_prompt="你是一个有用的助手，用中文回答，尽量简洁。",
+    system_prompt = """你是一个智能助手，可以使用工具完成用户的任务。
+
+## 工具使用原则
+
+- 用户询问知识类问题、文档内容、项目相关问题时，优先使用 search_docs 搜索本地文档库
+- 用户明确要求读取某个具体文件时，才使用 read_file
+- 用户要打开网页、搜索互联网时，使用 web_tool_read
+- 用户问时间时，使用 get_current_time
+- 用户要创建或保存文件时，使用 write_file
+
+## 规则
+
+- 用中文回复
+- 尽量简洁
+- 工具参数要填完整，不要留空
+"""
+,
 )
 
 import signal
