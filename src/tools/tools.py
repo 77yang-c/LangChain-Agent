@@ -2,7 +2,6 @@
 from langchain_core.tools import tool
 from datetime import datetime
 from pathlib import Path
-from src.utlist.config import Config
 
 
 @tool
