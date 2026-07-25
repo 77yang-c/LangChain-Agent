@@ -19,6 +19,47 @@ body{
   overflow:hidden;
 }
 
+/* ========== 登录页面 ========== */
+.login-page{
+  position:fixed; top:0; left:0; right:0; bottom:0;
+  background:#f5f5f5;
+  display:flex; align-items:center; justify-content:center;
+  z-index:9999;
+}
+.login-page.hidden{ display:none; }
+.login-card{
+  background:#fff;
+  border-radius:12px;
+  padding:40px 36px;
+  box-shadow:0 1px 3px rgba(0,0,0,.08);
+  text-align:center;
+  max-width:360px;
+  width:90%;
+}
+.login-title{
+  font-size:20px; font-weight:600; color:#1f2937; margin-bottom:6px;
+}
+.login-subtitle{
+  font-size:14px; color:#888; margin-bottom:28px;
+}
+.login-btn{
+  width:100%;
+  padding:12px 20px;
+  background:#24292e;
+  color:#fff;
+  border:none;
+  border-radius:8px;
+  font-size:15px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  transition:background .2s;
+}
+.login-btn:hover{ background:#1a1e22; }
+.login-btn svg{ width:20px; height:20px; fill:currentColor; }
+
 /* ========== 左侧侧边栏 ========== */
 .sidebar{
   width:260px;
@@ -49,10 +90,33 @@ body{
   font-weight:bold;
   flex-shrink:0;
   cursor:pointer;
+  overflow:hidden;
+}
+.user-avatar img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
 }
 .user-name{
   font-size:14px;
   color:#e5e7eb;
+  flex:1;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.logout-btn{
+  background:none;
+  border:none;
+  color:#9ca3af;
+  cursor:pointer;
+  font-size:12px;
+  padding:4px 8px;
+  border-radius:4px;
+  transition:color 0.2s;
+}
+.logout-btn:hover{
+  color:#fff;
 }
 
 /* 添加知识库文档按钮 */
@@ -272,37 +336,57 @@ body{
 </head>
 <body>
 
-<!-- 左侧侧边栏 -->
-<div class="sidebar">
-  <!-- 左上角用户头像区域 -->
-  <div class="sidebar-top-user">
-    <div class="user-avatar">U</div>
-    <div class="user-name">登录用户</div>
+<!-- 登录页面 -->
+<div class="login-page" id="loginPage">
+  <div class="login-card">
+    <h1 class="login-title">知识库客服</h1>
+    <p class="login-subtitle">使用 GitHub 账号登录</p>
+    <button class="login-btn" onclick="loginWithGithub()">
+      <svg viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+      GitHub 登录
+    </button>
   </div>
-
-  <!-- 顺序调整：上传文档放在最上方 -->
-  <button class="upload-doc-btn" id="rebuildBtn">🔄 重建索引</button>
-	  <button class="upload-doc-btn" id="uploadDocBtn">📄 添加知识库文档</button>
-  <button class="new-chat-btn" id="newChatBtn">＋ 新对话</button>
-
-  <div class="history-title">历史对话</div>
-  <div class="history-list" id="historyList"></div>
 </div>
 
-<!-- 右侧对话区域 -->
-<div class="main-wrap">
-  <div class="header">知识库客服</div>
-  <div class="messages" id="messages"></div>
+<!-- 主应用界面 -->
+<div id="appContainer" style="display:none; width:100%; height:100%;">
+  <!-- 左侧侧边栏 -->
+  <div class="sidebar">
+    <!-- 左上角用户头像区域 -->
+    <div class="sidebar-top-user">
+      <div class="user-avatar" id="userAvatar">U</div>
+      <div class="user-name" id="userName">登录用户</div>
+      <button class="logout-btn" onclick="logout()">登出</button>
+    </div>
 
-  <div class="input-wrap">
-    <div class="input-box">
-      <textarea id="userInput" placeholder="输入问题，回车发送，Shift+Enter换行"></textarea>
-      <button onclick="send()">发送</button>
+    <!-- 顺序调整：上传文档放在最上方 -->
+    <button class="upload-doc-btn" id="rebuildBtn">🔄 重建索引</button>
+    <button class="upload-doc-btn" id="uploadDocBtn">📄 添加知识库文档</button>
+    <button class="new-chat-btn" id="newChatBtn">＋ 新对话</button>
+
+    <div class="history-title">历史对话</div>
+    <div class="history-list" id="historyList"></div>
+  </div>
+
+  <!-- 右侧对话区域 -->
+  <div class="main-wrap">
+    <div class="header">知识库客服</div>
+    <div class="messages" id="messages"></div>
+
+    <div class="input-wrap">
+      <div class="input-box">
+        <textarea id="userInput" placeholder="输入问题，回车发送，Shift+Enter换行"></textarea>
+        <button onclick="send()">发送</button>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
+// ========= 全局状态 =========
+let sessionId = null;
+let currentUser = null;
+
 const msgs = document.getElementById("messages");
 const historyList = document.getElementById("historyList");
 const newChatBtn = document.getElementById("newChatBtn");
@@ -310,11 +394,109 @@ const rebuildBtn = document.getElementById("rebuildBtn");
 const uploadDocBtn = document.getElementById("uploadDocBtn");
 
 let threadId = Math.random().toString(36).slice(2);
-let abortController = null;   // 取消上一次请求
-// 历史会话存储：[{title, threadId}]
+let abortController = null;
 let chatHistory = [];
 
-// =========【添加知识库文档点击事件】========
+// ========= 登录相关 =========
+
+// 检查 URL 参数中的 session
+function checkUrlSession() {
+  const params = new URLSearchParams(window.location.search);
+  const session = params.get('session');
+  if (session) {
+    sessionId = session;
+    localStorage.setItem('session_id', session);
+    // 清除 URL 参数
+    window.history.replaceState({}, document.title, window.location.pathname);
+  } else {
+    sessionId = localStorage.getItem('session_id');
+  }
+}
+
+// 检查登录状态
+async function checkLoginStatus() {
+  checkUrlSession();
+  
+  if (!sessionId) {
+    showLoginPage();
+    return;
+  }
+  
+  try {
+    const resp = await fetch('/api/auth/me', {
+      headers: { 'X-Session-Id': sessionId }
+    });
+    const data = await resp.json();
+    
+    if (data.logged_in && data.user) {
+      currentUser = data.user;
+      showAppPage();
+    } else {
+      showLoginPage();
+    }
+  } catch (e) {
+    showLoginPage();
+  }
+}
+
+// 显示登录页面
+function showLoginPage() {
+  document.getElementById('loginPage').classList.remove('hidden');
+  document.getElementById('appContainer').style.display = 'none';
+}
+
+// 显示应用页面
+function showAppPage() {
+  document.getElementById('loginPage').classList.add('hidden');
+  document.getElementById('appContainer').style.display = 'flex';
+  
+  // 更新用户信息
+  if (currentUser) {
+    const avatarEl = document.getElementById('userAvatar');
+    const nameEl = document.getElementById('userName');
+    
+    if (currentUser.avatar_url) {
+      avatarEl.innerHTML = `<img src="${currentUser.avatar_url}" alt="avatar">`;
+    } else {
+      avatarEl.textContent = currentUser.username.charAt(0).toUpperCase();
+    }
+    nameEl.textContent = currentUser.username;
+  }
+  
+  // 初始化应用
+  loadConversations().then(() => renderHistory());
+  checkKBStatus();
+}
+
+// GitHub 登录
+async function loginWithGithub() {
+  try {
+    const resp = await fetch('/api/auth/github');
+    const data = await resp.json();
+    
+    if (data.auth_url) {
+      window.location.href = data.auth_url;
+    }
+  } catch (e) {
+    alert('登录失败，请重试');
+  }
+}
+
+// 登出
+async function logout() {
+  try {
+    await fetch('/api/auth/logout', { method: 'POST' });
+  } catch (e) {}
+  
+  sessionId = null;
+  currentUser = null;
+  localStorage.removeItem('session_id');
+  showLoginPage();
+}
+
+// ========= 聊天相关 =========
+
+// 添加知识库文档点击事件
 uploadDocBtn.onclick = function(){
   const input = document.createElement("input");
   input.type = "file";
@@ -332,23 +514,51 @@ uploadDocBtn.onclick = function(){
   input.click();
 };
 
+// 从后端加载对话列表
+async function loadConversations() {
+  if (!sessionId) return;
+  try {
+    const resp = await fetch("/api/conversations", {
+      headers: { "X-Session-Id": sessionId }
+    });
+    const data = await resp.json();
+    chatHistory = data.conversations || [];
+  } catch (e) {
+    chatHistory = [];
+  }
+}
+
 // 渲染侧边历史列表
 function renderHistory(){
   historyList.innerHTML = "";
-  chatHistory.forEach((item, idx)=>{
+  chatHistory.forEach((item)=>{
     const div = document.createElement("div");
-    div.className = "history-item" + (item.threadId === threadId ? " active" : "");
-    div.textContent = item.title;
+    div.className = "history-item" + (item.thread_id === threadId ? " active" : "");
+    div.textContent = item.title || "未命名";
     div.title = item.title;
-    div.onclick = ()=>switchChat(item.threadId);
+    div.onclick = ()=>switchChat(item.thread_id);
     historyList.appendChild(div);
-  })
+  });
 }
 
 // 切换会话
-function switchChat(tid){
+async function switchChat(tid){
   threadId = tid;
   msgs.innerHTML = "";
+
+  // 从后端加载该对话的历史消息
+  if (sessionId) {
+    try {
+      const resp = await fetch("/api/conversations/" + tid, {
+        headers: { "X-Session-Id": sessionId }
+      });
+      const data = await resp.json();
+      for (const m of (data.messages || [])) {
+        addMsg(m.role === "human" ? "user" : "ai", m.content);
+      }
+    } catch (e) {}
+  }
+
   renderHistory();
 }
 
@@ -364,7 +574,6 @@ async function send() {
   const text = input.value.trim();
   if (!text) return;
 
-  // 取消上一次未完成的请求
   if (abortController) {
     abortController.abort();
     abortController = null;
@@ -373,12 +582,13 @@ async function send() {
   addMsg("user", text);
   input.value = "";
 
-  const exist = chatHistory.find(c=>c.threadId === threadId);
+  // 新对话：先刷新侧边栏
+  const exist = chatHistory.find(c=>c.thread_id === threadId);
   if(!exist){
     chatHistory.unshift({
       title: text.slice(0,22) + (text.length>22?"...":""),
-      threadId: threadId
-    })
+      thread_id: threadId
+    });
     renderHistory();
   }
 
@@ -390,7 +600,10 @@ async function send() {
   try {
     const resp = await fetch("/api/chat", {
       method: "POST",
-      headers: {"Content-Type": "application/json"},
+      headers: {
+        "Content-Type": "application/json",
+        "X-Session-Id": sessionId
+      },
       body: JSON.stringify({message: text, thread_id: threadId}),
       signal: abortController.signal,
     });
@@ -437,6 +650,9 @@ async function send() {
   }
 
   abortController = null;
+
+  // 刷新侧边栏对话列表（获取后端自动标题）
+  loadConversations().then(() => renderHistory());
 }
 
 function addMsg(role, text) {
@@ -460,9 +676,6 @@ document.getElementById('userInput').addEventListener('keydown', function(e){
   }
 })
 
-renderHistory();
-checkKBStatus();
-
 async function checkKBStatus() {
   try {
     const r = await fetch("/api/kb/status");
@@ -481,6 +694,9 @@ rebuildBtn.onclick = async function() {
   rebuildBtn.textContent = "   重建索引 ";
   setTimeout(checkKBStatus, 2000);
 };
+
+// ========= 初始化 =========
+checkLoginStatus();
 </script>
 </body>
 </html>

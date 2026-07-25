@@ -6,3 +6,17 @@ venv/
 .vscode/
 .idea/
 *.db
+
+# 用户数据（数据库文件）
+user_data/
+
+# ChromaDB 缓存
+data/chroma_db/
+
+# 代码图谱
+.codegraph/
+
+# 数据库临时文件
+*.db-wal
+*.db-shm
+*.sqlite3
