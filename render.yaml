@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: langchain-kb
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m src.server
+    envVars:
+      - key: PORT
+        value: 8000

@@ -1,6 +1,7 @@
 """企业知识库客服--FastAPI服务端"""
 
 import json
+import os
 import time
 import secrets
 import logging
@@ -328,5 +329,6 @@ async def kb_upload(request: Request, file: UploadFile = File(...)):
 app.mount("/", StaticFiles(directory="static", html=True),name = "static")
 import uvicorn
 if __name__ == "__main__" :
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
     print("已关闭")
