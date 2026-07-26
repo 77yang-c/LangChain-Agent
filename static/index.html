@@ -376,12 +376,19 @@ body{
   .sidebar{ display:none; }
   .sidebar.mobile-open{
     display:flex; position:fixed; top:0; left:0; height:100%; z-index:100;
-    width:260px;
+    width:280px;
   }
-  .sidebar.mobile-open::before{
-    content:""; position:fixed; top:0; left:0; width:100vw; height:100vh;
-    background:rgba(0,0,0,.5); z-index:-1;
+  .mobile-overlay{
+    display:none; position:fixed; top:0; left:0; width:100vw; height:100vh;
+    background:rgba(0,0,0,.5); z-index:99;
   }
+  .mobile-overlay.show{ display:block; }
+  .mobile-close-btn{
+    display:none;
+    position:absolute; top:10px; right:10px; z-index:101;
+    background:none; border:none; color:#9ca3af; font-size:20px; cursor:pointer;
+  }
+  .sidebar.mobile-open .mobile-close-btn{ display:block; }
   .mobile-toggle-btn{
     display:flex !important;
     position:absolute; left:12px; top:14px; z-index:10;
@@ -412,11 +419,14 @@ body{
   </div>
 </div>
 
+<!-- 移动端遮罩 -->
+<div class="mobile-overlay" id="mobileOverlay" onclick="closeSidebar()"></div>
+
 <!-- 主应用界面 -->
 <div id="appContainer" style="display:none; width:100%; height:100%;">
   <!-- 左侧侧边栏 -->
   <div class="sidebar">
-    <!-- 左上角用户头像区域 -->
+    <button class="mobile-close-btn" onclick="closeSidebar()">✕</button>
     <div class="sidebar-top-user">
       <div class="user-avatar" id="userAvatar">U</div>
       <div class="user-name" id="userName">登录用户</div>
@@ -603,9 +613,11 @@ async function switchChat(tid){
 // 移动端侧边栏开关
 function toggleSidebar(){
   document.querySelector(".sidebar").classList.toggle("mobile-open");
+  document.getElementById("mobileOverlay").classList.toggle("show");
 }
 function closeSidebar(){
   document.querySelector(".sidebar").classList.remove("mobile-open");
+  document.getElementById("mobileOverlay").classList.remove("show");
 }
 // 切对话/新对话时关侧边栏
 const _origSwitch = switchChat;
@@ -707,7 +719,7 @@ async function send() {
 }
 
 // Markdown 渲染配置
-marked.setOptions({ breaks: true, gfm: true });
+marked.setOptions({ breaks: false, gfm: true });
 
 function hideWelcome() {
   const w = document.getElementById("welcomeMsg");
@@ -725,7 +737,12 @@ function addMsg(role, text) {
 
   const msg = document.createElement("div");
   msg.className = "msg";
-  msg.innerHTML = marked.parse(text);
+  // AI 消息 MD 渲染，用户消息纯文本
+  if (role === "ai") {
+    msg.innerHTML = marked.parse(text);
+  } else {
+    msg.textContent = text;
+  }
   wrap.appendChild(msg);
 
   // AI 消息加复制按钮
