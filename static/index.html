@@ -158,6 +158,16 @@ body{
 .new-chat-btn:hover{
   background:#374151;
 }
+.file-list{ margin-bottom:10px; max-height:150px; overflow-y:auto; }
+.file-item{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:4px 8px; font-size:12px; color:#9ca3af; border-radius:4px;
+}
+.file-item:hover{ background:#1f2937; }
+.file-item .del-btn{
+  background:none; border:none; color:#f87171; cursor:pointer; font-size:14px; padding:2px 4px;
+}
+.file-item .del-btn:hover{ color:#ef4444; }
 
 .history-title{
   font-size:12px;
@@ -416,6 +426,7 @@ body{
     <!-- 顺序调整：上传文档放在最上方 -->
     <button class="upload-doc-btn" id="rebuildBtn">🔄 重建索引</button>
     <button class="upload-doc-btn" id="uploadDocBtn">📄 添加知识库文档</button>
+    <div class="file-list" id="fileList"></div>
     <button class="new-chat-btn" id="newChatBtn">＋ 新对话</button>
 
     <div class="history-title">历史对话</div>
@@ -751,15 +762,42 @@ async function checkKBStatus() {
     if (btn) {
       btn.textContent = "🔄 重建索引 (" + d.file_count + "个文档" + (d.has_index ? " ✅" : " ❌") + ")";
     }
+    renderFileList(d.files || []);
   } catch(e) {}
 }
 
+function renderFileList(files) {
+  const list = document.getElementById("fileList");
+  if (!list) return;
+  list.innerHTML = "";
+  if (!files.length) {
+    list.innerHTML = '<div style="font-size:11px;color:#6b7280;padding:4px 8px;">暂无文档</div>';
+    return;
+  }
+  files.forEach(f => {
+    const name = f.replace(/^data[\/\\]/, "");
+    const item = document.createElement("div");
+    item.className = "file-item";
+    item.innerHTML = '<span title="' + name + '">📄 ' + name + '</span>';
+
+    const del = document.createElement("button");
+    del.className = "del-btn";
+    del.textContent = "×";
+    del.title = "删除";
+    del.onclick = async () => {
+      if (!confirm("删除 " + name + "？")) return;
+      await fetch("/api/kb/files/" + encodeURIComponent(name), { method: "DELETE" });
+      checkKBStatus();
+    };
+    item.appendChild(del);
+    list.appendChild(item);
+  });
+}
+
 rebuildBtn.onclick = async function() {
-  rebuildBtn.textContent = "  重建中...";
-  const r = await fetch("/api/kb/rebuild", { method: "POST" });
-  const d = await r.json();
-  rebuildBtn.textContent = "   重建索引 ";
-  setTimeout(checkKBStatus, 2000);
+  rebuildBtn.textContent = "⏳ 重建中...";
+  await fetch("/api/kb/rebuild", { method: "POST" });
+  checkKBStatus();
 };
 
 // ========= 初始化 =========

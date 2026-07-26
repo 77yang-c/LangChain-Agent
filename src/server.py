@@ -326,6 +326,24 @@ async def kb_upload(request: Request, file: UploadFile = File(...)):
     return {"status": "ok", "filename": safe_name}
 
 
+@app.delete("/api/kb/files/{filename}")
+async def kb_delete(filename: str, request: Request):
+    """删除知识库文档"""
+    if not _get_user(request):
+        return JSONResponse({"error": "请先登录"}, status_code=401)
+
+    safe_name = Path(filename).name
+    target = (Path("data") / safe_name).resolve()
+    if not str(target).startswith(str(Path("data").resolve())):
+        return JSONResponse({"error": "非法文件名"}, status_code=400)
+
+    if not target.exists():
+        return JSONResponse({"error": "文件不存在"}, status_code=404)
+
+    target.unlink()
+    return {"status": "ok", "deleted": safe_name}
+
+
 app.mount("/", StaticFiles(directory="static", html=True),name = "static")
 import uvicorn
 if __name__ == "__main__" :
