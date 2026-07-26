@@ -8,7 +8,7 @@ load_dotenv()
 
 @dataclass
 class Config:
-    model_name : str = "deepseek-v4-pro"
+    model_name : str = "GLM-4.7-flash"
     openai_api_key : str = ""
     base_url : str = ""
     temperature : float = 0.0

@@ -8,10 +8,6 @@ python-dotenv>=1.0.0
 langchain-community>=0.3.0
 langchain-text-splitters>=0.3.0
 chromadb>=0.5.0
-sentence-transformers>=3.0.0
-
-# 网页抓取（web_tool_read）
-playwright>=1.40.0
 
 # HTTP 客户端（GitHub OAuth）
 httpx>=0.25.0

@@ -1,39 +1,32 @@
-"""RAG工具：文档加载->切片->向量化->检索"""
-
-import os
-# 彻底解决 HuggingFace 联网问题：用镜像 + 离线模式
-os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
-os.environ["HF_HUB_OFFLINE"] = "1"           # 不联网检查更新
-os.environ["TRANSFORMERS_OFFLINE"] = "1"      # Transformers 也不联网
+"""RAG 工具：文档加载 -> 切片 -> 向量化 -> 检索（API 向量化）"""
 
 from pathlib import Path
 from langchain_community.document_loaders import TextLoader
 from langchain_community.vectorstores import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain_core.tools import tool
+from src.utlist.config import get_config
 
 _retriever = None
-_embeddings = None
 
 
 def _get_embeddings():
-    """懒加载 embeddings，全局复用，避免每次都加载模型"""
-    global _embeddings
-    if _embeddings is None:
-        _embeddings = HuggingFaceEmbeddings(
-            model_name="shibing624/text2vec-base-chinese",
-        )
-    return _embeddings
+    """通过智谱 API 做向量化"""
+    config = get_config()
+    return OpenAIEmbeddings(
+        model="embedding-3",
+        api_key=config.openai_api_key,
+        base_url=config.base_url,
+    )
 
 
 def init_retriever(docs_dir: str = "data", force_rebuild: bool = False):
-    """初始化检索引擎：优先从 ChromaDB 缓存加载，避免重新向量化"""
+    """初始化检索引擎，优先从 ChromaDB 缓存加载"""
     global _retriever
 
     chroma_dir = Path(docs_dir) / "chroma_db"
 
-    # 优先加载缓存
     if chroma_dir.exists() and not force_rebuild:
         try:
             vec = Chroma(
@@ -43,10 +36,9 @@ def init_retriever(docs_dir: str = "data", force_rebuild: bool = False):
             _retriever = vec.as_retriever(search_kwargs={"k": 3})
             count = vec._collection.count()
             return f"从缓存加载，共 {count} 个文档片段"
-        except Exception as e:
-            return f"缓存加载失败：{e}，请点「重建索引」"
+        except:
+            pass
 
-    # 重建索引
     doc = []
     for ext in ("*.txt", "*.md"):
         for f in Path(docs_dir).rglob(ext):
@@ -57,7 +49,7 @@ def init_retriever(docs_dir: str = "data", force_rebuild: bool = False):
 
     if not doc:
         _retriever = None
-        return "未找到文档，请先在 data/ 目录下放入 .txt 或 .md 文件。"
+        return "未找到文档"
 
     sp = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
     chunks = sp.split_documents(doc)
@@ -84,7 +76,7 @@ def search_docs(query: str) -> str:
     docs = _retriever.invoke(query)
 
     if not docs:
-        return "未找到相关内容。"
+        return "未找到相关内容"
 
     results = []
     for i, doc in enumerate(docs, 1):
