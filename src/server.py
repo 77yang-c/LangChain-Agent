@@ -1,7 +1,17 @@
 """企业知识库客服--FastAPI服务端"""
 
 import json
+import time
 import secrets
+import logging
+from collections import defaultdict
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s",
+    handlers=[logging.StreamHandler(), logging.FileHandler("server.log", encoding="utf-8")],
+)
+logger = logging.getLogger(__name__)
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import StreamingResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -14,10 +24,6 @@ from pathlib import Path
 from fastapi import FastAPI, Request, UploadFile, File
 from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from langgraph.checkpoint.memory import MemorySaver
-from langchain.agents import create_agent
-from langchain_openai import ChatOpenAI
-from langchain_core.messages import AIMessage, AIMessageChunk
 
 from src.utlist.config import get_config
 from src.tools.tools import ALL_TOOLS
@@ -28,6 +34,12 @@ from src.models.conversation import save_message, get_conversations, get_message
 
 #Fast--API
 app = FastAPI(title="知识库客服")
+
+
+@app.get("/api/health")
+async def health():
+    return {"status": "ok"}
+
 
 # Agent复用
 #1 LLM 
@@ -40,7 +52,7 @@ llm = ChatOpenAI(
     streaming=True,
 )
 
-#Memory（跨轮记忆，thread_id隔离不同的用户）
+# Agent 上下文（内存模式，对话历史已通过 conversations 表持久化）
 memory = MemorySaver()
 
 agent = create_agent(
@@ -108,21 +120,25 @@ async def github_callback(code: str, state: str):
     # 创建会话
     session_id = create_session(user_id)
     
-    # 重定向到前端，带上 session_id
-    # 生产环境应该使用 httpOnly cookie
-    frontend_url = f"/?session={session_id}"
-    return RedirectResponse(url=frontend_url)
+    # 设置 httpOnly cookie，前端 JS 不可访问，防 XSS
+    response = RedirectResponse(url="/")
+    response.set_cookie(
+        key="session_id",
+        value=session_id,
+        httponly=True,
+        secure=False,        # 本地开发用 False，上线改 True（HTTPS）
+        samesite="lax",
+        max_age=7 * 24 * 3600,  # 7 天
+    )
+    return response
 
 
 @app.get("/api/auth/me")
 async def get_current_user(request: Request):
     """获取当前登录用户信息"""
-    session_id = request.headers.get("X-Session-Id") or request.query_params.get("session")
-    
-    if not session_id:
+    user = _get_user(request)
+    if not user:
         return {"logged_in": False, "user": None}
-    
-    user = get_user_by_session(session_id)
     if not user:
         return {"logged_in": False, "user": None}
     
@@ -139,16 +155,29 @@ async def get_current_user(request: Request):
 
 @app.post("/api/auth/logout")
 async def logout(request: Request):
-    """登出"""
-    return {"status": "ok"}
+    """退出"""
+    response = JSONResponse({"status": "ok"})
+    response.delete_cookie("session_id")
+    return response
 
 
 def _get_user(request: Request):
-    """从请求中获取当前用户，未登录返回 None"""
-    sid = request.headers.get("X-Session-Id") or request.query_params.get("session")
+    """从 httpOnly cookie 中获取当前用户"""
+    sid = request.cookies.get("session_id")
     if not sid:
         return None
     return get_user_by_session(sid)
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start = time.time()
+    response = await call_next(request)
+    elapsed = (time.time() - start) * 1000
+    user = _get_user(request)
+    who = user["username"] if user else "anonymous"
+    logger.info(f"{request.method} {request.url.path} | {who} | {elapsed:.0f}ms")
+    return response
 
 
 # ========= 对话历史 API =========
@@ -178,19 +207,36 @@ async def get_conversation_messages(thread_id: str, request: Request):
 # ========= 聊天接口 =========
 
 #api
+# 简易限流：每用户每分钟最多 10 次请求
+_rate_buckets = defaultdict(list)
+
+def _check_rate(user_id: int, limit: int = 10, window: int = 60) -> bool:
+    now = time.time()
+    bucket = _rate_buckets[user_id]
+    bucket[:] = [t for t in bucket if now - t < window]
+    if len(bucket) >= limit:
+        return False
+    bucket.append(now)
+    return True
+
+
 @app.post("/api/chat")
 async def chat(request: Request):
     """流式聊天接口（SSE）"""
+    user = _get_user(request)
+    if not user:
+        return JSONResponse({"error": "请先登录"}, status_code=401)
+
+    if not _check_rate(user["id"]):
+        return JSONResponse({"error": "请求太频繁，请稍后再试"}, status_code=429)
+
     data = await request.json()
     user_input = data.get("message", "")
     thread_id = data.get("thread_id", "default")
-    user = _get_user(request)
 
     thread = {"configurable": {"thread_id": thread_id}}
 
-    # 保存用户消息
-    if user:
-        save_message(user["id"], thread_id, "human", user_input)
+    save_message(user["id"], thread_id, "human", user_input)
 
     async def stream():
         ai_text = ""
@@ -214,7 +260,7 @@ async def chat(request: Request):
             yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
 
         # 保存 AI 回复
-        if user and ai_text:
+        if ai_text:
             save_message(user["id"], thread_id, "ai", ai_text)
 
         yield f"data: {json.dumps({'done': True})}\n\n"
@@ -241,20 +287,42 @@ async def kb_status():
 
 
 @app.post("/api/kb/rebuild")
-async def kb_rebuild():
+async def kb_rebuild(request: Request):
     """手动重建知识库索引"""
+    if not _get_user(request):
+        return JSONResponse({"error": "请先登录"}, status_code=401)
     result = init_retriever(force_rebuild=True)
     return {"status": "ok", "message": result}
 
 
+ALLOWED_EXT = {".txt", ".md", ".pdf", ".csv", ".json"}
+MAX_SIZE_MB = 10
+
 @app.post("/api/kb/upload")
-async def kb_upload(file: UploadFile = File(...)):
+async def kb_upload(request: Request, file: UploadFile = File(...)):
     """上传文档到知识库"""
+    if not _get_user(request):
+        return JSONResponse({"error": "请先登录"}, status_code=401)
+
+    # 文件类型白名单
+    ext = Path(file.filename).suffix.lower()
+    if ext not in ALLOWED_EXT:
+        return JSONResponse({"error": f"不支持的文件类型：{ext}，仅支持 {', '.join(ALLOWED_EXT)}"}, status_code=400)
+
+    # 读取内容，限制大小
     content = await file.read()
-    save_path = Path("data") / file.filename
+    if len(content) > MAX_SIZE_MB * 1024 * 1024:
+        return JSONResponse({"error": f"文件过大，最大 {MAX_SIZE_MB}MB"}, status_code=400)
+
+    # 文件名防路径穿越
+    safe_name = Path(file.filename).name
+    save_path = (Path("data") / safe_name).resolve()
+    if not str(save_path).startswith(str(Path("data").resolve())):
+        return JSONResponse({"error": "非法文件名"}, status_code=400)
+
     save_path.parent.mkdir(parents=True, exist_ok=True)
     save_path.write_bytes(content)
-    return {"status": "ok", "filename": file.filename}
+    return {"status": "ok", "filename": safe_name}
 
 
 app.mount("/", StaticFiles(directory="static", html=True),name = "static")
