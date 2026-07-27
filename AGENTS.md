@@ -2,167 +2,135 @@
 
 ## 项目概述
 
-基于 LangChain/LangGraph 架构的企业知识库客服系统。支持 RAG 文档检索、多轮对话、流式输出，提供 Web 界面供用户交互。
+基于 LangChain / LangGraph 框架构建的智能知识库客服系统。支持文档 RAG 检索、流式对话、多轮记忆、GitHub OAuth 登录，提供类 ChatGPT 的 Web 对话界面。
 
-核心功能：
-- 企业文档知识库管理（支持 .txt/.md 文件）
-- 基于 RAG 的智能问答
-- 流式对话输出（SSE）
-- 多工具调用（文件读写、网页抓取、时间查询等）
-- GitHub OAuth 登录认证
+**在线地址**：`https://smtp-pot-name-barcelona.trycloudflare.com`
 
 ## 技术栈
 
-- **后端**：Python 3 + FastAPI
-- **Agent 框架**：LangChain + LangGraph
-- **向量数据库**：ChromaDB
-- **Embedding 模型**：shibing624/text2vec-base-chinese（HuggingFace）
-- **LLM**：OpenAI 兼容接口（通过 .env 配置）
-- **前端**：原生 HTML/CSS/JavaScript
-- **包管理**：uv（Python）、pip（requirements.txt）
+| 层 | 技术 |
+|------|------|
+| Agent 框架 | LangChain + LangGraph（`create_agent`） |
+| Web 服务 | FastAPI + Uvicorn（SSE 流式） |
+| LLM | DeepSeek（`deepseek-v4-pro`），OpenAI 兼容协议 |
+| Embedding | 智谱 GLM（`embedding-3`），API 调用，不下载模型 |
+| 向量库 | ChromaDB（本地持久化） |
+| 文档存储 | SQLite（`user_data/users.db`） |
+| 用户认证 | GitHub OAuth + httpOnly Cookie |
+| 前端 | 原生 HTML/CSS/JS（零框架） |
+| 部署 | VPS + Cloudflare Tunnel（HTTPS） |
 
 ## 目录结构
 
 ```
-/workspace/projects/
+langchain-agent/
 ├── src/
-│   ├── main.py              # 命令行版本入口
-│   ├── server.py            # FastAPI Web 服务入口
-│   ├── agent/               # Agent 模块（待扩展）
-│   ├── memory/              # 记忆模块（待扩展）
-│   ├── prompts/             # 提示词模块（待扩展）
+│   ├── server.py              # FastAPI Web 服务主入口
+│   ├── main.py                # 命令行版 Agent（学习用）
+│   ├── agent/agent.py         # Agent 封装（预留）
+│   ├── prompt/prompt.py       # 提示词模板（预留）
+│   ├── memory/memory.py       # 记忆模块（预留）
 │   ├── tools/
-│   │   ├── tools.py         # 工具定义（时间、文件读写、网页抓取）
-│   │   └── rag.py           # RAG 工具（文档加载、切片、向量化、检索）
+│   │   ├── tools.py           # 工具定义：时间、文件读写
+│   │   └── rag.py             # RAG：SQLite 加载 → 切片 → API 向量化 → ChromaDB
 │   ├── models/
-│   │   └── user.py          # 用户数据库模型
-│   ├── auth/
-│   │   └── github_oauth.py  # GitHub OAuth 认证
-│   └── utlist/
-│       └── config.py        # 配置加载（.env）
-├── static/
-│   └── index.html           # 前端页面（含登录）
-├── data/                    # 知识库文档目录
-│   ├── *.txt, *.md          # 文档文件
-│   └── chroma_db/           # ChromaDB 向量索引缓存
-├── user_data/               # 用户数据（已加入 .gitignore）
-│   └── users.db             # SQLite 用户数据库
-├── test/                    # 测试目录
-├── requirements.txt         # Python 依赖
-└── .env                     # 环境变量配置（需自行创建）
+│   │   ├── user.py            # 用户 + 会话表
+│   │   ├── conversation.py    # 对话历史 + 消息表
+│   │   └── documents.py       # 知识库文档表
+│   ├── auth/github_oauth.py   # GitHub OAuth
+│   └── utlist/config.py       # .env 配置加载（主模型 + Embedding 分离）
+├── static/index.html          # Web 前端（含登录、侧边栏、Markdown 渲染）
+├── user_data/                 # 持久化数据（.gitignore）
+│   ├── users.db               # SQLite（user, session, conversation, message, document）
+│   └── chroma_db/             # ChromaDB 向量缓存
+├── STAGE1~5.md                # 学习笔记
+├── requirements.txt
+├── .env                       # 环境变量（不提交）
+└── .gitignore
 ```
 
-## 关键入口 / 核心模块
+## API 接口
 
-### 入口文件
-- **Web 服务**：`src/server.py` - FastAPI 应用，提供 `/api/chat`（流式聊天）、`/api/kb/status`（知识库状态）等接口
-- **命令行**：`src/main.py` - 交互式命令行版本
+| 方法 | 路径 | 说明 | 鉴权 |
+|------|------|------|------|
+| `GET` | `/api/health` | 健康检查 | 无 |
+| `GET` | `/api/auth/github` | GitHub OAuth 入口 | 无 |
+| `GET` | `/api/auth/github/callback` | OAuth 回调 | 无 |
+| `GET` | `/api/auth/me` | 当前用户信息 | Cookie |
+| `POST` | `/api/auth/logout` | 登出 | Cookie |
+| `GET` | `/api/conversations` | 对话列表 | Cookie |
+| `GET` | `/api/conversations/{id}` | 对话消息 | Cookie |
+| `POST` | `/api/chat` | 流式聊天（SSE） | Cookie + 限流 |
+| `GET` | `/api/kb/status` | 知识库状态 | Cookie |
+| `POST` | `/api/kb/upload` | 上传文档 | Cookie |
+| `POST` | `/api/kb/rebuild` | 重建向量索引 | Cookie |
+| `DELETE` | `/api/kb/files/{name}` | 删除文档 | Cookie |
 
-### 核心模块
-- **Agent 创建**：`src/server.py` 中的 `create_agent()` 调用
-- **工具集**：`src/tools/tools.py` - 定义 ALL_TOOLS 列表
-- **RAG 检索**：`src/tools/rag.py` - 文档向量化与检索逻辑
-- **配置管理**：`src/utlist/config.py` - 从 .env 加载 LLM 配置
+## 上线安全加固
 
-### API 接口
-- `POST /api/chat` - 流式聊天（SSE）
-- `GET /api/kb/status` - 知识库状态查询
-- `POST /api/kb/upload` - 上传文档
-- `POST /api/kb/rebuild` - 重建索引
-- `GET /api/auth/github` - 发起 GitHub OAuth 登录
-- `GET /api/auth/github/callback` - GitHub OAuth 回调
-- `GET /api/auth/me` - 获取当前登录用户信息
-- `POST /api/auth/logout` - 登出
-- `GET /` - 前端页面
+1. session → httpOnly Cookie（防 XSS）
+2. 聊天/上传接口强制鉴权（未登录 401）
+3. 文件上传限制：类型白名单 + 5MB 上限 + 防路径穿越
+4. 频率限制：每用户每分钟最多 10 次聊天
+5. 请求日志：stdout + server.log 双写
 
-## 运行与预览
+## 部署步骤
 
-### 环境配置
-1. 创建 `.env` 文件，配置以下变量：
-   ```
-   MODEL_NAME=your-model-name
-   OPENAI_API_KEY=your-api-key
-   BASE_URL=your-base-url
-   TEMPERATURE=0.0
-   
-   # GitHub OAuth 配置
-   GITHUB_CLIENT_ID=your-github-client-id
-   GITHUB_CLIENT_SECRET=your-github-client-secret
-   GITHUB_REDIRECT_URI=http://localhost:5000/api/auth/github/callback
-   ```
+### 1. VPS 环境
 
-2. 安装依赖：
-   ```bash
-   uv pip install -r requirements.txt
-   ```
-
-3. 准备知识库文档：
-   - 将 .txt 或 .md 文件放入 `data/` 目录
-
-### GitHub OAuth 配置
-1. 前往 [GitHub Developer Settings](https://github.com/settings/developers)
-2. 点击 "New OAuth App" 创建应用
-3. 填写应用信息：
-   - Application name: 你的应用名称
-   - Homepage URL: http://localhost:5000
-   - Authorization callback URL: http://localhost:5000/api/auth/github/callback
-4. 创建后获取 Client ID 和 Client Secret，填入 `.env` 文件
-
-### 启动服务
 ```bash
-# 使用 uvicorn 启动 FastAPI 服务
-uvicorn src.server:app --host 0.0.0.0 --port 5000
+sudo apt update && sudo apt install -y python3 python3-pip git
+git clone https://github.com/77yang-c/LangChain-Agent.git
+cd LangChain-Agent
+pip install -r requirements.txt
 ```
 
-### 预览
-- 访问前端页面即可使用知识库客服功能
-- 支持上传文档、重建索引、多轮对话
+### 2. 配置
 
-## 预览与部署配置
+```bash
+cat > .env << 'EOF'
+MODEL_NAME=deepseek-v4-pro
+OPENAI_API_KEY=sk-xxx
+BASE_URL=https://api.deepseek.com
+EMBEDDING_MODEL=embedding-3
+EMBEDDING_API_KEY=xxx
+EMBEDDING_BASE_URL=https://open.bigmodel.cn/api/paas/v4
+GITHUB_CLIENT_ID=xxx
+GITHUB_CLIENT_SECRET=xxx
+GITHUB_REDIRECT_URI=https://xxx.trycloudflare.com/api/auth/github/callback
+EOF
+```
 
-### 预览链路
-- **项目类型**：web（有前端界面 + 后端服务）
-- **预览入口**：`scripts/coze-preview-run.sh`
-- **构建脚本**：`scripts/coze-preview-build.sh`
-- **运行脚本**：`scripts/coze-preview-run.sh`
-- **端口**：5000
-- **绑定地址**：0.0.0.0
+### 3. 启动
 
-### 部署配置
-- **部署类型**：service（HTTP 服务）
-- **部署表面**：web
-- **构建脚本**：`scripts/setup.sh`（安装依赖）
-- **运行脚本**：`scripts/http_run.sh -p 5000`（启动服务）
-- **运行时**：python-3.12
+```bash
+nohup python3 -m src.server &
+```
 
-### 脚本说明
-- 预览脚本和部署脚本均基于脚本位置推导项目根目录（`SCRIPT_DIR` → `PROJECT_DIR`）
-- 运行脚本具备幂等性：每次执行先清理 5000 端口残留进程
-- 所有脚本使用 `set -Eeuo pipefail` 确保错误处理
+### 4. 内网穿透（HTTPS 免备案）
 
-## 用户偏好与长期约束
+```bash
+wget https://gh.idayer.com/https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O cloudflared
+chmod +x cloudflared
+nohup ./cloudflared tunnel --url http://localhost:8000 > tunnel.log 2>&1 &
+```
 
-- 使用中文进行所有交互
-- Python 项目使用 uv 管理虚拟环境和依赖
-- 前端保持原生 HTML/CSS/JS，不引入框架
-- LLM 集成默认使用流式返回
-- 知识库文档支持 .txt 和 .md 格式
+### 5. 更新 GitHub OAuth
 
-## 常见问题和预防
+https://github.com/settings/developers → Callback URL 改为 Cloudflare 域名
 
-### 1. HuggingFace 模型下载失败
-- 已配置镜像源：`HF_ENDPOINT=https://hf-mirror.com`
-- 已启用离线模式：`HF_HUB_OFFLINE=1`
-- 首次运行需要下载 embedding 模型，确保网络畅通
+## 使用流程
 
-### 2. ChromaDB 索引问题
-- 索引缓存在 `data/chroma_db/` 目录
-- 如索引损坏，可通过前端「重建索引」功能或调用 `/api/kb/rebuild` 接口重建
+```
+上传 .txt/.md 文档 → 点「重建索引」→ 开始提问
+```
 
-### 3. LLM 连接失败
-- 检查 `.env` 文件中的 API_KEY 和 BASE_URL 是否正确
-- 确认模型名称与服务商支持一致
+- 上传文档存 SQLite，不受 Git 部署影响
+- 重建索引调用 Embedding API 向量化，缓存到 ChromaDB
+- 对话历史持久化，切换会话可恢复
 
-### 4. Playwright 网页抓取
-- web_tool_read 工具使用 Playwright，需要安装浏览器驱动
-- 生产环境建议使用 headless 模式
+## 已知限制
+
+- 免费 Cloudflare Tunnel 每次重启域名会变
+- MemorySaver 重启丢失 Agent 上下文（对话记录仍在）
+- 关键词匹配精度不如向量检索（但零费用方案够用）

@@ -1,7 +1,7 @@
-# 基于 LangChain 架构的 Agent
-# 项目已经部署在：
-## 需要科学上网
-```https://smtp-pot-name-barcelona.trycloudflare.com/```
+# 基于 LangChain 架构的企业知识库客服
+
+> 在线地址：https://smtp-pot-name-barcelona.trycloudflare.com
+
 ## 一、LangChain 架构概览
 
 ```
