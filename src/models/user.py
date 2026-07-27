@@ -16,6 +16,8 @@ def get_db():
     DB_DIR.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")      # 读写并发，不锁表
+    conn.execute("PRAGMA busy_timeout=5000")      # 忙等 5 秒
     return conn
 
 

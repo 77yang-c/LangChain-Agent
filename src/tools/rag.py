@@ -1,31 +1,31 @@
-"""RAG 工具：文档加载 -> 切片 -> 向量化 -> 检索（API 向量化）"""
+"""RAG 工具：从 SQLite 加载文档 -> 切片 -> API 向量化 -> 检索"""
 
 from pathlib import Path
-from langchain_community.document_loaders import TextLoader
 from langchain_community.vectorstores import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_core.tools import tool
+from langchain_core.documents import Document
 from src.utlist.config import get_config
+from src.models.documents import get_all_contents
 
 _retriever = None
 
 
 def _get_embeddings():
-    """通过智谱 API 做向量化"""
     config = get_config()
     return OpenAIEmbeddings(
-        model="embedding-3",
-        api_key=config.openai_api_key,
-        base_url=config.base_url,
+        model=config.embedding_model,
+        api_key=config.embedding_api_key or config.openai_api_key,
+        base_url=config.embedding_base_url or config.base_url,
     )
 
 
-def init_retriever(docs_dir: str = "data", force_rebuild: bool = False):
-    """初始化检索引擎，优先从 ChromaDB 缓存加载"""
+def init_retriever(force_rebuild: bool = False):
+    """从 SQLite 加载文档，构建向量索引"""
     global _retriever
 
-    chroma_dir = Path(docs_dir) / "chroma_db"
+    chroma_dir = Path("user_data") / "chroma_db"
 
     if chroma_dir.exists() and not force_rebuild:
         try:
@@ -39,20 +39,19 @@ def init_retriever(docs_dir: str = "data", force_rebuild: bool = False):
         except:
             pass
 
-    doc = []
-    for ext in ("*.txt", "*.md"):
-        for f in Path(docs_dir).rglob(ext):
-            if "chroma_db" in str(f):
-                continue
-            loader = TextLoader(str(f), encoding="utf-8")
-            doc.extend(loader.load())
-
-    if not doc:
+    # 从数据库读取所有文档
+    rows = get_all_contents()
+    if not rows:
         _retriever = None
-        return "未找到文档"
+        return "未找到文档，请先上传"
+
+    # 转为 langchain Document
+    docs = []
+    for r in rows:
+        docs.append(Document(page_content=r["content"], metadata={"source": r["filename"]}))
 
     sp = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
-    chunks = sp.split_documents(doc)
+    chunks = sp.split_documents(docs)
 
     vec = Chroma.from_documents(
         chunks,
@@ -65,7 +64,7 @@ def init_retriever(docs_dir: str = "data", force_rebuild: bool = False):
 
 @tool
 def search_docs(query: str) -> str:
-    """搜索本地文档库，查找与问题相关的内容。query 为搜索关键词或问题。"""
+    """搜索本地文档库，查找与问题相关的内容。"""
     global _retriever
 
     if _retriever is None:

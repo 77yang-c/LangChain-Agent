@@ -1,0 +1,5 @@
+2026-07-27 18:20:34,855 | INFO | langchain-openai detected system proxy configuration and no explicit `http_socket_options` / `http_client` / `http_async_client` / `openai_proxy`; skipping the custom `httpx` transport so httpx's env-proxy auto-detection applies. Pass `http_socket_options=[...]` to opt back into kernel-level TCP keepalive tuning on top of the env proxy.
+2026-07-27 18:21:37,824 | INFO | GET / | anonymous | 83ms
+2026-07-27 18:21:39,058 | INFO | GET /api/auth/me | anonymous | 1ms
+2026-07-27 18:21:39,082 | INFO | GET /favicon.ico | anonymous | 2ms
+2026-07-27 18:21:39,924 | INFO | GET /api/auth/github | anonymous | 0ms

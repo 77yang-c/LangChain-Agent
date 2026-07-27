@@ -13,18 +13,14 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(), logging.FileHandler("server.log", encoding="utf-8")],
 )
 logger = logging.getLogger(__name__)
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import StreamingResponse, FileResponse, RedirectResponse
+from pathlib import Path
+from fastapi import FastAPI, Request, HTTPException, UploadFile, File
+from fastapi.responses import StreamingResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from langgraph.checkpoint.memory import MemorySaver
 from langchain.agents import create_agent
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import AIMessage, AIMessageChunk
-
-from pathlib import Path
-from fastapi import FastAPI, Request, UploadFile, File
-from fastapi.responses import StreamingResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
 
 from src.utlist.config import get_config
 from src.tools.tools import ALL_TOOLS
@@ -32,6 +28,7 @@ from src.tools.rag import init_retriever
 from src.models.user import upsert_user, create_session, get_user_by_session
 from src.auth.github_oauth import get_github_auth_url, exchange_code_for_token, get_github_user, get_github_user_email
 from src.models.conversation import save_message, get_conversations, get_messages
+from src.models.documents import save_document, delete_document, get_documents, get_all_contents
 
 #Fast--API
 app = FastAPI(title="知识库客服")
@@ -138,8 +135,6 @@ async def github_callback(code: str, state: str):
 async def get_current_user(request: Request):
     """获取当前登录用户信息"""
     user = _get_user(request)
-    if not user:
-        return {"logged_in": False, "user": None}
     if not user:
         return {"logged_in": False, "user": None}
     
@@ -278,12 +273,11 @@ async def chat(request: Request):
 @app.get("/api/kb/status")
 async def kb_status():
     """查看知识库状态"""
-    files = [str(f) for f in Path("data").rglob("*.*")
-             if f.suffix in (".txt", ".md") and "chroma_db" not in str(f)]
+    docs = get_documents()
     return {
-        "files": files,
-        "file_count": len(files),
-        "has_index": Path("data/chroma_db").exists(),
+        "files": [d["filename"] for d in docs],
+        "file_count": len(docs),
+        "has_index": Path("user_data/chroma_db").exists(),
     }
 
 
@@ -296,34 +290,26 @@ async def kb_rebuild(request: Request):
     return {"status": "ok", "message": result}
 
 
-ALLOWED_EXT = {".txt", ".md", ".pdf", ".csv", ".json"}
-MAX_SIZE_MB = 10
+ALLOWED_EXT = {".txt", ".md", ".csv", ".json"}
+MAX_SIZE_MB = 5
 
 @app.post("/api/kb/upload")
 async def kb_upload(request: Request, file: UploadFile = File(...)):
-    """上传文档到知识库"""
+    """上传文档到知识库（存 SQLite，不依赖文件系统）"""
     if not _get_user(request):
         return JSONResponse({"error": "请先登录"}, status_code=401)
 
-    # 文件类型白名单
     ext = Path(file.filename).suffix.lower()
     if ext not in ALLOWED_EXT:
-        return JSONResponse({"error": f"不支持的文件类型：{ext}，仅支持 {', '.join(ALLOWED_EXT)}"}, status_code=400)
+        return JSONResponse({"error": f"不支持的文件类型：{ext}"}, status_code=400)
 
-    # 读取内容，限制大小
     content = await file.read()
     if len(content) > MAX_SIZE_MB * 1024 * 1024:
         return JSONResponse({"error": f"文件过大，最大 {MAX_SIZE_MB}MB"}, status_code=400)
 
-    # 文件名防路径穿越
-    safe_name = Path(file.filename).name
-    save_path = (Path("data") / safe_name).resolve()
-    if not str(save_path).startswith(str(Path("data").resolve())):
-        return JSONResponse({"error": "非法文件名"}, status_code=400)
-
-    save_path.parent.mkdir(parents=True, exist_ok=True)
-    save_path.write_bytes(content)
-    return {"status": "ok", "filename": safe_name}
+    text = content.decode("utf-8", errors="replace")
+    save_document(file.filename, text)
+    return {"status": "ok", "filename": file.filename}
 
 
 @app.delete("/api/kb/files/{filename}")
@@ -331,17 +317,8 @@ async def kb_delete(filename: str, request: Request):
     """删除知识库文档"""
     if not _get_user(request):
         return JSONResponse({"error": "请先登录"}, status_code=401)
-
-    safe_name = Path(filename).name
-    target = (Path("data") / safe_name).resolve()
-    if not str(target).startswith(str(Path("data").resolve())):
-        return JSONResponse({"error": "非法文件名"}, status_code=400)
-
-    if not target.exists():
-        return JSONResponse({"error": "文件不存在"}, status_code=404)
-
-    target.unlink()
-    return {"status": "ok", "deleted": safe_name}
+    delete_document(filename)
+    return {"status": "ok", "deleted": filename}
 
 
 app.mount("/", StaticFiles(directory="static", html=True),name = "static")
