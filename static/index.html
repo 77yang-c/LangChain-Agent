@@ -554,7 +554,7 @@ async function logout() {
 uploadDocBtn.onclick = function(){
   const input = document.createElement("input");
   input.type = "file";
-  input.accept = ".txt,.md,.pdf";
+  input.accept = ".txt,.md";
   input.multiple = true;
   input.onchange = async () => {
     for (const f of input.files) {
@@ -658,6 +658,7 @@ async function send() {
 
   const aiDiv = addMsg("ai", "");
   let fullText = "";
+  let toolShown = false;
 
   abortController = new AbortController();
 
@@ -688,12 +689,13 @@ async function send() {
         if (json.error) {
           aiDiv.textContent = "出错了：" + json.error;
         }
-        if (json.tool) {
+        if (json.tool && !toolShown) {
+          toolShown = true;
           const toolWrap = document.createElement("div");
           toolWrap.className = "tool-wrap";
           const toolDiv = document.createElement("div");
           toolDiv.className = "tool";
-          toolDiv.textContent = "🔧 " + json.tool;
+          toolDiv.textContent = "🔧 正在调用工具...";
           toolWrap.appendChild(toolDiv);
           msgs.appendChild(toolWrap);
         }

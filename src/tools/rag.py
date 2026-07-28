@@ -33,7 +33,7 @@ def init_retriever(force_rebuild: bool = False):
                 persist_directory=str(chroma_dir),
                 embedding_function=_get_embeddings(),
             )
-            _retriever = vec.as_retriever(search_kwargs={"k": 3})
+            _retriever = vec.as_retriever(search_kwargs={"k": 10})
             count = vec._collection.count()
             return f"从缓存加载，共 {count} 个文档片段"
         except:
@@ -58,7 +58,7 @@ def init_retriever(force_rebuild: bool = False):
         _get_embeddings(),
         persist_directory=str(chroma_dir),
     )
-    _retriever = vec.as_retriever(search_kwargs={"k": 3})
+    _retriever = vec.as_retriever(search_kwargs={"k": 10})
     return f"已索引 {len(chunks)} 个文档片段"
 
 
@@ -77,9 +77,16 @@ def search_docs(query: str) -> str:
     if not docs:
         return "未找到相关内容"
 
+    # 去重：同一文档只保留最相关的一个片段
+    seen = set()
     results = []
-    for i, doc in enumerate(docs, 1):
+    for doc in docs:
         source = doc.metadata.get("source", "未知")
-        results.append(f"[{i}] 来源：{source}\n{doc.page_content}")
+        if source in seen:
+            continue
+        seen.add(source)
+        results.append(f"[{len(results)+1}] 来源：{source}\n{doc.page_content}")
+        if len(results) >= 3:
+            break
 
     return "\n\n---\n\n".join(results)
