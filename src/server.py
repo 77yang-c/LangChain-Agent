@@ -232,7 +232,7 @@ async def chat(request: Request):
     user_input = data.get("message", "")
     thread_id = data.get("thread_id", "default")
 
-    thread = {"configurable": {"thread_id": thread_id}, "recursion_limit": 8}
+    thread = {"configurable": {"thread_id": thread_id}, "recursion_limit": 15}
 
     save_message(user["id"], thread_id, "human", user_input)
 
