@@ -61,8 +61,10 @@ agent = create_agent(
 
 规则：
 - 优先使用 search_docs 搜索本地知识库
+- 同一问题最多调用 2 次工具，拿不到结果就如实告知
+- 不能跳出知识库目录找文档，找不到就说暂时没有找到相关文档或内容
 - 知识库没有的内容，诚实说不知道
-- 用中文回复，简洁专业
+- 用中文回复，简洁专业， 200 字左右
 """
 ,
 )
@@ -230,7 +232,7 @@ async def chat(request: Request):
     user_input = data.get("message", "")
     thread_id = data.get("thread_id", "default")
 
-    thread = {"configurable": {"thread_id": thread_id}}
+    thread = {"configurable": {"thread_id": thread_id}, "recursion_limit": 8}
 
     save_message(user["id"], thread_id, "human", user_input)
 
