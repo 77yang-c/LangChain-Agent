@@ -68,11 +68,13 @@ langchain-agent/
 
 ## 上线安全加固
 
-1. session → httpOnly Cookie（防 XSS）
-2. 聊天/上传接口强制鉴权（未登录 401）
-3. 文件上传限制：类型白名单 + 5MB 上限 + 防路径穿越
-4. 频率限制：每用户每分钟最多 10 次聊天
-5. 请求日志：stdout + server.log 双写
+1. session → httpOnly Cookie（防 XSS）；生产设 `COOKIE_SECURE=true`
+2. 聊天/知识库/对话接口强制鉴权（未登录 401）；知识库与 Agent thread 按 user_id 隔离
+3. 文件上传限制：类型白名单 + 5MB 上限 + 文件名净化
+4. 频率限制：每用户每分钟最多 10 次聊天（SQLite 持久化）
+5. Web Agent 仅 `SAFE_TOOLS`（时间 + search_docs），禁止任意读写文件
+6. OAuth state / Agent checkpoint 落 SQLite，重启不丢
+7. 请求日志：stdout + server.log 双写
 
 ## 部署步骤
 
@@ -98,6 +100,7 @@ EMBEDDING_BASE_URL=https://open.bigmodel.cn/api/paas/v4
 GITHUB_CLIENT_ID=xxx
 GITHUB_CLIENT_SECRET=xxx
 GITHUB_REDIRECT_URI=https://xxx.trycloudflare.com/api/auth/github/callback
+COOKIE_SECURE=true
 EOF
 ```
 
@@ -132,5 +135,6 @@ https://github.com/settings/developers → Callback URL 改为 Cloudflare 域名
 ## 已知限制
 
 - 免费 Cloudflare Tunnel 每次重启域名会变
-- MemorySaver 重启丢失 Agent 上下文（对话记录仍在）
+- 旧版无 user_id 的全局知识库文档在升级时会被清空（需重新上传）
+- 多实例部署时 SQLite 仍有并发瓶颈，大规模需换 Postgres / Redis
 - 关键词匹配精度不如向量检索（但零费用方案够用）

@@ -2,10 +2,11 @@
 
 import json
 import os
+import sqlite3
 import time
 import secrets
 import logging
-from collections import defaultdict
+from pathlib import Path
 
 logging.basicConfig(
     level=logging.INFO,
@@ -13,24 +14,24 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(), logging.FileHandler("server.log", encoding="utf-8")],
 )
 logger = logging.getLogger(__name__)
-from pathlib import Path
+
 from fastapi import FastAPI, Request, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.sqlite import SqliteSaver
 from langchain.agents import create_agent
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import AIMessage, AIMessageChunk
 
 from src.utlist.config import get_config
-from src.tools.tools import ALL_TOOLS
-from src.tools.rag import init_retriever
-from src.models.user import upsert_user, create_session, get_user_by_session
+from src.tools.tools import SAFE_TOOLS
+from src.tools.rag import init_retriever, set_kb_user, reset_kb_user, has_user_index, clear_user_index
+from src.models.user import upsert_user, create_session, get_user_by_session, DB_DIR
 from src.auth.github_oauth import get_github_auth_url, exchange_code_for_token, get_github_user, get_github_user_email
 from src.models.conversation import save_message, get_conversations, get_messages
-from src.models.documents import save_document, delete_document, get_documents, get_all_contents
+from src.models.documents import save_document, delete_document, get_documents
+from src.models.security import save_oauth_state, consume_oauth_state, check_rate_limit
 
-#Fast--API
 app = FastAPI(title="知识库客服")
 
 
@@ -39,8 +40,6 @@ async def health():
     return {"status": "ok"}
 
 
-# Agent复用
-#1 LLM 
 config = get_config()
 llm = ChatOpenAI(
     model=config.model_name,
@@ -50,65 +49,108 @@ llm = ChatOpenAI(
     streaming=True,
 )
 
-# Agent 上下文（内存模式，对话历史已通过 conversations 表持久化）
-memory = MemorySaver()
+# Agent 上下文持久化到 SQLite（重启可恢复；thread 按用户隔离）
+DB_DIR.mkdir(parents=True, exist_ok=True)
+_ckpt_conn = sqlite3.connect(
+    str(DB_DIR / "checkpoints.db"),
+    check_same_thread=False,
+)
+memory = SqliteSaver(_ckpt_conn)
+memory.setup()
 
 agent = create_agent(
     model=llm,
-    tools=ALL_TOOLS,
+    tools=SAFE_TOOLS,
     checkpointer=memory,
-    system_prompt = """你是企业知识库客服助手。根据文档库内容回答用户问题。
+    system_prompt="""你是企业知识库客服助手。根据文档库内容回答用户问题。
 
 规则：
 - 优先使用 search_docs 搜索本地知识库
 - 先搜索知识库再回答，找不到就说未找到
-- 不能跳出知识库目录找文档，找不到就说暂时没有找到相关文档或内容
+- 只能通过 search_docs 检索知识库，不能读写任意文件
 - 知识库没有的内容，诚实说不知道
-- 用中文回复，简洁专业， 200 字左右
-"""
-,
+- 用中文回复，简洁专业，200 字左右
+""",
 )
 
-# ========= 认证相关 =========
 
-# 存储 state 用于 CSRF 防护（生产环境应使用 Redis）
-oauth_states = {}
+def _require_user(request: Request) -> dict:
+    user = _get_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="请先登录")
+    return user
+
+
+def _get_user(request: Request):
+    """从 httpOnly cookie 中获取当前用户"""
+    sid = request.cookies.get("session_id")
+    if not sid:
+        return None
+    return get_user_by_session(sid)
+
+
+def _agent_thread_id(user_id: int, thread_id: str) -> str:
+    """Agent checkpointer 的 thread 必须带用户前缀，防止跨用户串会话"""
+    return f"u{user_id}:{thread_id}"
+
+
+def _safe_filename(name: str | None) -> str | None:
+    if not name:
+        return None
+    base = Path(name).name
+    if not base or base in (".", ".."):
+        return None
+    return base
+
+
+def _set_session_cookie(response, session_id: str) -> None:
+    response.set_cookie(
+        key="session_id",
+        value=session_id,
+        httponly=True,
+        secure=config.cookie_secure,
+        samesite="lax",
+        max_age=7 * 24 * 3600,
+    )
+
+
+def _clear_session_cookie(response) -> None:
+    response.delete_cookie(
+        key="session_id",
+        httponly=True,
+        secure=config.cookie_secure,
+        samesite="lax",
+    )
+
+
+# ========= 认证相关 =========
 
 @app.get("/api/auth/github")
 async def github_login():
     """发起 GitHub OAuth 登录"""
     state = secrets.token_urlsafe(16)
-    oauth_states[state] = True  # 简单存储，生产环境应设置过期时间
-    
-    auth_url = get_github_auth_url(state)
-    return {"auth_url": auth_url}
+    save_oauth_state(state)
+    return {"auth_url": get_github_auth_url(state)}
 
 
 @app.get("/api/auth/github/callback")
 async def github_callback(code: str, state: str):
     """GitHub OAuth 回调"""
-    # 验证 state
-    if state not in oauth_states:
+    if not consume_oauth_state(state):
         raise HTTPException(status_code=400, detail="Invalid state")
-    
-    del oauth_states[state]
-    
-    # 用 code 换取 access_token
+
     access_token = await exchange_code_for_token(code)
     if not access_token:
         raise HTTPException(status_code=400, detail="Failed to get access token")
-    
-    # 获取用户信息
+
     user_info = await get_github_user(access_token)
     if not user_info:
         raise HTTPException(status_code=400, detail="Failed to get user info")
-    
-    # 获取邮箱（可能为空）
+
     email = user_info.get("email")
     if not email:
         email = await get_github_user_email(access_token)
-    
-    # 存储用户信息
+
     user_id = upsert_user(
         github_id=user_info["id"],
         username=user_info["login"],
@@ -116,20 +158,10 @@ async def github_callback(code: str, state: str):
         email=email,
         access_token=access_token,
     )
-    
-    # 创建会话
+
     session_id = create_session(user_id)
-    
-    # 设置 httpOnly cookie，前端 JS 不可访问，防 XSS
     response = RedirectResponse(url="/")
-    response.set_cookie(
-        key="session_id",
-        value=session_id,
-        httponly=True,
-        secure=False,        # 本地开发用 False，上线改 True（HTTPS）
-        samesite="lax",
-        max_age=7 * 24 * 3600,  # 7 天
-    )
+    _set_session_cookie(response, session_id)
     return response
 
 
@@ -139,7 +171,7 @@ async def get_current_user(request: Request):
     user = _get_user(request)
     if not user:
         return {"logged_in": False, "user": None}
-    
+
     return {
         "logged_in": True,
         "user": {
@@ -147,7 +179,7 @@ async def get_current_user(request: Request):
             "username": user["username"],
             "avatar_url": user["avatar_url"],
             "email": user["email"],
-        }
+        },
     }
 
 
@@ -155,16 +187,8 @@ async def get_current_user(request: Request):
 async def logout(request: Request):
     """退出"""
     response = JSONResponse({"status": "ok"})
-    response.delete_cookie("session_id")
+    _clear_session_cookie(response)
     return response
-
-
-def _get_user(request: Request):
-    """从 httpOnly cookie 中获取当前用户"""
-    sid = request.cookies.get("session_id")
-    if not sid:
-        return None
-    return get_user_by_session(sid)
 
 
 @app.middleware("http")
@@ -183,9 +207,7 @@ async def log_requests(request: Request, call_next):
 @app.get("/api/conversations")
 async def list_conversations(request: Request):
     """获取当前用户的对话列表"""
-    user = _get_user(request)
-    if not user:
-        return {"conversations": []}
+    user = _require_user(request)
     convs = get_conversations(user["id"])
     for c in convs:
         c["title"] = c["title"] or "未命名对话"
@@ -194,54 +216,45 @@ async def list_conversations(request: Request):
 
 @app.get("/api/conversations/{thread_id}")
 async def get_conversation_messages(thread_id: str, request: Request):
-    """获取某个对话的消息历史"""
-    user = _get_user(request)
-    if not user:
-        return {"messages": []}
+    """获取某个对话的消息历史（仅本人）"""
+    user = _require_user(request)
     msgs = get_messages(user["id"], thread_id)
     return {"messages": msgs}
 
 
 # ========= 聊天接口 =========
 
-#api
-# 简易限流：每用户每分钟最多 10 次请求
-_rate_buckets = defaultdict(list)
-
-def _check_rate(user_id: int, limit: int = 10, window: int = 60) -> bool:
-    now = time.time()
-    bucket = _rate_buckets[user_id]
-    bucket[:] = [t for t in bucket if now - t < window]
-    if len(bucket) >= limit:
-        return False
-    bucket.append(now)
-    return True
-
-
 @app.post("/api/chat")
 async def chat(request: Request):
     """流式聊天接口（SSE）"""
-    user = _get_user(request)
-    if not user:
-        return JSONResponse({"error": "请先登录"}, status_code=401)
+    user = _require_user(request)
 
-    if not _check_rate(user["id"]):
+    if not check_rate_limit(user["id"]):
         return JSONResponse({"error": "请求太频繁，请稍后再试"}, status_code=429)
 
     data = await request.json()
     user_input = data.get("message", "")
     thread_id = data.get("thread_id", "default")
+    if not isinstance(user_input, str) or not user_input.strip():
+        return JSONResponse({"error": "消息不能为空"}, status_code=400)
+    if not isinstance(thread_id, str) or not thread_id.strip() or len(thread_id) > 128:
+        return JSONResponse({"error": "无效的会话 ID"}, status_code=400)
 
-    thread = {"configurable": {"thread_id": thread_id}, "recursion_limit": 15}
+    agent_cfg = {
+        "configurable": {"thread_id": _agent_thread_id(user["id"], thread_id)},
+        "recursion_limit": 15,
+    }
 
     save_message(user["id"], thread_id, "human", user_input)
 
     async def stream():
         ai_text = ""
+        errored = False
+        token = set_kb_user(user["id"])
         try:
             for chunk, _ in agent.stream(
                 {"messages": [("human", user_input)]},
-                config=thread,
+                config=agent_cfg,
                 stream_mode="messages",
             ):
                 if isinstance(chunk, (AIMessage, AIMessageChunk)):
@@ -255,10 +268,13 @@ async def chat(request: Request):
                         yield f"data: {json.dumps({'text': chunk.content}, ensure_ascii=False)}\n\n"
 
         except Exception as e:
-            yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
+            errored = True
+            logger.warning(f"Agent error: {e}")
+            yield f"data: {json.dumps({'error': '请求太复杂，请简化问题后重试'}, ensure_ascii=False)}\n\n"
+        finally:
+            reset_kb_user(token)
 
-        # 保存 AI 回复
-        if ai_text:
+        if ai_text and not errored:
             save_message(user["id"], thread_id, "ai", ai_text)
 
         yield f"data: {json.dumps({'done': True})}\n\n"
@@ -270,38 +286,42 @@ async def chat(request: Request):
     )
 
 
-# --- 知识库管理 ---
+# --- 知识库管理（按用户隔离）---
+
+ALLOWED_EXT = {".txt", ".md", ".csv", ".json"}
+MAX_SIZE_MB = 5
+
 
 @app.get("/api/kb/status")
-async def kb_status():
-    """查看知识库状态"""
-    docs = get_documents()
+async def kb_status(request: Request):
+    """查看当前用户的知识库状态"""
+    user = _require_user(request)
+    docs = get_documents(user["id"])
     return {
         "files": [d["filename"] for d in docs],
         "file_count": len(docs),
-        "has_index": Path("user_data/chroma_db").exists(),
+        "has_index": has_user_index(user["id"]),
     }
 
 
 @app.post("/api/kb/rebuild")
 async def kb_rebuild(request: Request):
-    """手动重建知识库索引"""
-    if not _get_user(request):
-        return JSONResponse({"error": "请先登录"}, status_code=401)
-    result = init_retriever(force_rebuild=True)
+    """手动重建当前用户的知识库索引"""
+    user = _require_user(request)
+    result = init_retriever(user["id"], force_rebuild=True)
     return {"status": "ok", "message": result}
 
 
-ALLOWED_EXT = {".txt", ".md", ".csv", ".json"}
-MAX_SIZE_MB = 5
-
 @app.post("/api/kb/upload")
 async def kb_upload(request: Request, file: UploadFile = File(...)):
-    """上传文档到知识库（存 SQLite，不依赖文件系统）"""
-    if not _get_user(request):
-        return JSONResponse({"error": "请先登录"}, status_code=401)
+    """上传文档到当前用户知识库"""
+    user = _require_user(request)
 
-    ext = Path(file.filename).suffix.lower()
+    filename = _safe_filename(file.filename)
+    if not filename:
+        return JSONResponse({"error": "无效的文件名"}, status_code=400)
+
+    ext = Path(filename).suffix.lower()
     if ext not in ALLOWED_EXT:
         return JSONResponse({"error": f"不支持的文件类型：{ext}"}, status_code=400)
 
@@ -310,22 +330,31 @@ async def kb_upload(request: Request, file: UploadFile = File(...)):
         return JSONResponse({"error": f"文件过大，最大 {MAX_SIZE_MB}MB"}, status_code=400)
 
     text = content.decode("utf-8", errors="replace")
-    save_document(file.filename, text)
-    return {"status": "ok", "filename": file.filename}
+    save_document(user["id"], filename, text)
+    # 文档变更后旧索引失效
+    clear_user_index(user["id"])
+    return {"status": "ok", "filename": filename}
 
 
 @app.delete("/api/kb/files/{filename}")
 async def kb_delete(filename: str, request: Request):
-    """删除知识库文档"""
-    if not _get_user(request):
-        return JSONResponse({"error": "请先登录"}, status_code=401)
-    delete_document(filename)
-    return {"status": "ok", "deleted": filename}
+    """删除当前用户知识库文档"""
+    user = _require_user(request)
+    safe = _safe_filename(filename)
+    if not safe:
+        return JSONResponse({"error": "无效的文件名"}, status_code=400)
+
+    if not delete_document(user["id"], safe):
+        return JSONResponse({"error": "文件不存在"}, status_code=404)
+
+    clear_user_index(user["id"])
+    return {"status": "ok", "deleted": safe}
 
 
-app.mount("/", StaticFiles(directory="static", html=True),name = "static")
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
+
 import uvicorn
-if __name__ == "__main__" :
+
+if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
-    print("已关闭")

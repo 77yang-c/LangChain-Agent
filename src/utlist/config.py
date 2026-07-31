@@ -24,6 +24,9 @@ class Config:
     github_client_secret: str = ""
     github_redirect_uri: str = "http://localhost:5000/api/auth/github/callback"
 
+    # Cookie：生产 HTTPS 必须 True（COOKIE_SECURE=true）
+    cookie_secure: bool = False
+
 
 def get_config() -> Config:
     return Config(
@@ -37,4 +40,5 @@ def get_config() -> Config:
         github_client_id=os.getenv("GITHUB_CLIENT_ID", ""),
         github_client_secret=os.getenv("GITHUB_CLIENT_SECRET", ""),
         github_redirect_uri=os.getenv("GITHUB_REDIRECT_URI", "http://localhost:5000/api/auth/github/callback"),
+        cookie_secure=os.getenv("COOKIE_SECURE", "false").lower() in ("1", "true", "yes"),
     )
