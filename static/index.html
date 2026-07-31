@@ -1,492 +1,306 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>知识库客服</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: { brand: '#3157d5' }
+      }
+    }
+  };
+</script>
+<script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <style>
-*{
-  margin:0;
-  padding:0;
-  box-sizing:border-box;
-}
-body{
-  font-family:system-ui,-apple-system,"Microsoft YaHei",sans-serif;
-  background:#ffffff;
-  color:#1f2937;
-  height:100vh;
-  display:flex;
-  overflow:hidden;
-}
-
-/* ========== 登录页面 ========== */
-.login-page{
-  position:fixed; top:0; left:0; right:0; bottom:0;
-  background:#f5f5f5;
-  display:flex; align-items:center; justify-content:center;
-  z-index:9999;
-}
-.login-page.hidden{ display:none; }
-.login-card{
-  background:#fff;
-  border-radius:12px;
-  padding:40px 36px;
-  box-shadow:0 1px 3px rgba(0,0,0,.08);
-  text-align:center;
-  max-width:360px;
-  width:90%;
-}
-.login-title{
-  font-size:20px; font-weight:600; color:#1f2937; margin-bottom:6px;
-}
-.login-subtitle{
-  font-size:14px; color:#888; margin-bottom:28px;
-}
-.login-btn{
-  width:100%;
-  padding:12px 20px;
-  background:#24292e;
-  color:#fff;
-  border:none;
-  border-radius:8px;
-  font-size:15px;
-  cursor:pointer;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:8px;
-  transition:background .2s;
-}
-.login-btn:hover{ background:#1a1e22; }
-.login-btn svg{ width:20px; height:20px; fill:currentColor; }
-
-/* ========== 左侧侧边栏 ========== */
-.sidebar{
-  width:260px;
-  background:#111827;
-  color:#e5e7eb;
-  display:flex;
-  flex-direction:column;
-  padding:16px 12px;
-}
-/* 侧边栏顶部用户区域 */
-.sidebar-top-user{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:8px 6px 16px;
-  border-bottom:1px solid #272f3f;
-  margin-bottom:16px;
-}
-.user-avatar{
-  width:36px;
-  height:36px;
-  border-radius:50%;
-  background:#3b82f6;
-  color:#fff;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-weight:bold;
-  flex-shrink:0;
-  cursor:pointer;
-  overflow:hidden;
-}
-.user-avatar img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-}
-.user-name{
-  font-size:14px;
-  color:#e5e7eb;
-  flex:1;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-.logout-btn{
-  background:none;
-  border:none;
-  color:#9ca3af;
-  cursor:pointer;
-  font-size:12px;
-  padding:4px 8px;
-  border-radius:4px;
-  transition:color 0.2s;
-}
-.logout-btn:hover{
-  color:#fff;
-}
-
-/* 添加知识库文档按钮 */
-.upload-doc-btn{
-  width:100%;
-  padding:10px 14px;
-  background:#2563eb;
-  border:none;
-  border-radius:10px;
-  color:#fff;
-  cursor:pointer;
-  font-size:14px;
-  display:flex;
-  align-items:center;
-  gap:8px;
-  margin-bottom:10px;
-  transition:opacity 0.2s;
-}
-.upload-doc-btn:hover{
-  opacity:0.9;
-}
-
-.new-chat-btn{
-  width:100%;
-  padding:10px 14px;
-  background:#1f2937;
-  border:1px solid #374151;
-  border-radius:10px;
-  color:#f9fafb;
-  cursor:pointer;
-  font-size:14px;
-  display:flex;
-  align-items:center;
-  gap:8px;
-  margin-bottom:20px;
-  transition:background 0.2s;
-}
-.new-chat-btn:hover{
-  background:#374151;
-}
-.file-list{ margin-bottom:10px; max-height:150px; overflow-y:auto; }
-.file-item{
-  display:flex; align-items:center; justify-content:space-between;
-  padding:4px 8px; font-size:12px; color:#9ca3af; border-radius:4px;
-}
-.file-item:hover{ background:#1f2937; }
-.file-item .del-btn{
-  background:none; border:none; color:#f87171; cursor:pointer; font-size:14px; padding:2px 4px;
-}
-.file-item .del-btn:hover{ color:#ef4444; }
-
-.history-title{
-  font-size:12px;
-  color:#9ca3af;
-  padding:0 6px 8px;
-}
-.history-list{
-  flex:1;
-  overflow-y:auto;
-}
-.history-item{
-  padding:9px 10px;
-  border-radius:8px;
-  font-size:14px;
-  cursor:pointer;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  margin-bottom:4px;
-}
-.history-item:hover{
-  background:#1f2937;
-}
-.history-item.active{
-  background:#273449;
-}
-
-/* ========== 右侧对话主区域 ========== */
-.main-wrap{
-  flex:1;
-  display:flex;
-  flex-direction:column;
-  overflow:hidden;
-  background:#f9fafb;
-}
-.header{
-  height:52px;
-  background:#fff;
-  border-bottom:1px solid #e5e7eb;
-  display:flex;
-  align-items:center;
-  padding:0 20px;
-  font-size:15px;
-  font-weight:600;
-  color:#374151;
-}
-.messages{
-  flex:1;
-  overflow-y:auto;
-  padding:24px 0;
-  width:100%;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-}
-.msg-wrap{
-  width:100%;
-  max-width:720px;
-  padding:0 24px;
-  display:flex;
-  margin-bottom:18px;
-}
-.msg-wrap.user{ justify-content:flex-end; }
-.msg-wrap.ai{ justify-content:flex-start; }
-.msg{
-  max-width:85%;
-  line-height:1.75;
-  font-size:15px;
-  padding:10px 16px;
-  border-radius:16px;
-  word-break:break-word;
-  white-space:pre-wrap;
-}
-.msg-wrap.user .msg{
-  background:#1677ff;
-  color:#fff;
-  border-bottom-right-radius:4px;
-}
-.msg-wrap.ai .msg{
-  background:#fff;
-  color:#1f2937;
-  border:1px solid #e5e7eb;
-  border-bottom-left-radius:4px;
-}
-.tool-wrap{
-  width:100%;
-  max-width:720px;
-  padding:0 24px;
-  margin-bottom:4px;
-  display:flex;
-}
-.welcome{
-  flex:1;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  text-align:center;
-  padding:40px 20px;
-}
-.welcome-icon{ font-size:48px; margin-bottom:16px; }
-.welcome-title{ font-size:18px; font-weight:600; color:#374151; margin-bottom:8px; }
-.welcome-hint{ font-size:14px; color:#9ca3af; max-width:400px; line-height:1.8; }
-.tool{
-  color:#9ca3af;
-  font-size:12px;
-  padding:2px 0;
-}
-.input-wrap{
-  background:#fff;
-  border-top:1px solid #e5e7eb;
-  padding:14px 0;
-}
-.input-box{
-  max-width:720px;
-  margin:0 auto;
-  padding:0 24px;
-  display:flex;
-  gap:8px;
-  align-items:flex-end;
-}
-.input-box textarea{
-  flex:1;
-  border:1px solid #d1d5db;
-  outline:none;
-  font-size:15px;
-  padding:10px 14px;
-  border-radius:12px;
-  min-height:44px;
-  max-height:160px;
-  resize:none;
-  background:#fff;
-  font-family:inherit;
-}
-.input-box textarea:focus{
-  border-color:#1677ff;
-  box-shadow:0 0 0 2px rgba(22,119,255,.15);
-}
-.input-box button{
-  padding:10px 20px;
-  background:#1677ff;
-  color:#fff;
-  border:none;
-  border-radius:10px;
-  cursor:pointer;
-  font-size:14px;
-  flex-shrink:0;
-  transition:background .2s;
-}
-.input-box button:hover{ background:#0958d9; }
-/* Markdown 样式 */
-.msg pre{ background:#1e1e1e; color:#d4d4d4; padding:12px 14px; border-radius:8px; overflow-x:auto; margin:8px 0; font-size:13px; line-height:1.5; }
-.msg code{ font-family:"Cascadia Code","Fira Code",monospace; font-size:13px; }
-.msg p code{ background:#e5e7eb; color:#d6336c; padding:2px 6px; border-radius:4px; }
-.msg ul,.msg ol{ padding-left:20px; margin:6px 0; }
-.msg a{ color:#1677ff; }
-.msg-wrap.ai{ position:relative; }
-.copy-btn{
-  position:absolute; bottom:4px; right:8px; z-index:5;
-  background:#fff; border:1px solid #d1d5db; border-radius:6px;
-  padding:4px 7px; font-size:13px; color:#666; cursor:pointer;
-  opacity:0; transition:opacity .15s; line-height:1;
-}
-.msg-wrap.ai:hover .copy-btn{ opacity:1; }
-.copy-btn:hover{ background:#f3f4f6; border-color:#9ca3af; }
-.input-box textarea{
-  flex:1;
-  border:none;
-  outline:none;
-  font-size:15px;
-  min-height:44px;
-  max-height:160px;
-  resize:none;
-  background:transparent;
-}
-.input-box button{
-  padding:10px 22px;
-  background:#1677ff;
-  color:#fff;
-  border:none;
-  border-radius:12px;
-  cursor:pointer;
-  font-size:14px;
-  transition:opacity 0.2s;
-}
-.input-box button:hover{
-  opacity:0.9;
-}
-
-/* 滚动条美化 */
-.messages::-webkit-scrollbar,
-.history-list::-webkit-scrollbar{
-  width:6px;
-}
-.messages::-webkit-scrollbar-thumb,
-.history-list::-webkit-scrollbar-thumb{
-  background:#d1d5db;
-  border-radius:3px;
-}
-.history-list::-webkit-scrollbar-track{
-  background:transparent;
-}
-
-/* ========== 移动端适配 ========== */
-@media (max-width: 768px) {
-  .sidebar{ display:none; }
-  .sidebar.mobile-open{
-    display:flex; position:fixed; top:0; left:0; height:100%; z-index:100;
-    width:280px;
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #f3f5f9;
+    color: #172033;
+    font-family: "Segoe UI", ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   }
-  .mobile-overlay{
-    display:none; position:fixed; top:0; left:0; width:100vw; height:100vh;
-    background:rgba(0,0,0,.5); z-index:99;
+  .scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+  .scrollbar::-webkit-scrollbar-thumb { background: #d7dce7; border-radius: 999px; }
+  .scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .message-enter { animation: messageIn .25s ease-out; }
+  @keyframes messageIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
   }
-  .mobile-overlay.show{ display:block; }
-  .mobile-close-btn{
-    display:none;
-    position:absolute; top:10px; right:10px; z-index:101;
-    background:none; border:none; color:#9ca3af; font-size:20px; cursor:pointer;
+  .conversation.active { background: #eef2ff; }
+  .conversation.active .conv-title {
+    color: #1e293b;
+    font-weight: 600;
   }
-  .sidebar.mobile-open .mobile-close-btn{ display:block; }
-  .mobile-toggle-btn{
-    display:flex !important;
-    position:absolute; left:12px; top:14px; z-index:10;
-    background:none; border:none; color:#374151; font-size:22px; cursor:pointer;
+  .conversation.active iconify-icon { color: #3157d5 !important; }
+
+  .ai-content { white-space: normal; }
+  .ai-content p { margin: 0 0 .6em; }
+  .ai-content p:last-child { margin-bottom: 0; }
+  .ai-content pre {
+    background: #1e1e1e; color: #d4d4d4; padding: 12px 14px;
+    border-radius: 8px; overflow-x: auto; margin: 8px 0; font-size: 13px; line-height: 1.5;
   }
-  .main-wrap .header{ padding-left:50px; }
-  .msg-wrap{ max-width:100%; padding:0 12px; }
-  .msg{ max-width:90%; font-size:14px; }
-  .input-box{ max-width:100%; padding:0 12px; }
-  .login-card{ padding:32px 24px; }
-}
-@media (min-width: 769px) {
-  .mobile-toggle-btn{ display:none !important; }
-}
+  .ai-content code { font-family: "Cascadia Code", "Fira Code", ui-monospace, monospace; font-size: 13px; }
+  .ai-content p code, .ai-content li code {
+    background: #e8ecf4; color: #c0255c; padding: 2px 6px; border-radius: 4px;
+  }
+  .ai-content ul, .ai-content ol { padding-left: 1.25rem; margin: 6px 0; }
+  .ai-content a { color: #3157d5; }
+  .ai-content strong { font-weight: 600; color: #0f172a; }
+
+  .login-page.hidden { display: none !important; }
+  #appContainer { display: none; height: 100vh; }
+  #appContainer.show { display: flex; }
+
+  @media (max-width: 768px) {
+    .app-shell { max-width: none !important; box-shadow: none !important; }
+    aside.sidebar {
+      display: none;
+      position: fixed; inset: 0 auto 0 0; z-index: 100; height: 100%;
+      width: min(292px, 86vw);
+      box-shadow: 8px 0 30px rgba(34, 48, 80, 0.18);
+    }
+    aside.sidebar.mobile-open { display: flex; }
+    .mobile-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, .45); z-index: 99;
+    }
+    .mobile-overlay.show { display: block; }
+  }
 </style>
 </head>
-<body>
+<body class="min-h-screen">
 
-<!-- 登录页面 -->
-<div class="login-page" id="loginPage">
-  <div class="login-card">
-    <h1 class="login-title">知识库客服</h1>
-    <p class="login-subtitle">使用 GitHub 账号登录</p>
-    <button class="login-btn" onclick="loginWithGithub()">
-      <svg viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+<!-- Tailwind 动态类预热（JS 创建气泡时用到） -->
+<div class="hidden">
+  <div class="message-enter mb-7 flex justify-end items-start gap-3"></div>
+  <div class="max-w-[600px] max-w-[680px] min-w-0 flex-1"></div>
+  <div class="mb-1.5 flex justify-end items-center gap-2"></div>
+  <div class="rounded-2xl rounded-tr-md rounded-tl-md bg-[#3157d5] bg-[#f7f8fb] border border-slate-200 px-5 py-4 text-[14px] leading-7 text-white text-slate-700 shadow-sm whitespace-pre-wrap"></div>
+  <div class="flex h-8 w-8 flex-none items-center justify-center overflow-hidden rounded-full bg-[#dce5ff] bg-[#3157d5] text-[12px] font-bold text-[#3157d5] text-white"></div>
+  <div class="text-[12px] text-[10px] font-bold text-slate-800 text-slate-400"></div>
+  <div class="ai-actions mt-2 flex gap-3 text-[11px] text-slate-400 hover:text-[#3157d5]"></div>
+  <div class="mb-3 flex items-center gap-2 pl-11 text-[12px] text-slate-400"></div>
+  <div class="conversation active flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-slate-100"></div>
+  <span class="conv-title min-w-0 flex-1 truncate text-[13px] font-medium font-semibold text-slate-600 text-slate-800"></span>
+</div>
+
+<!-- 登录页 -->
+<div class="login-page fixed inset-0 z-[9999] flex items-center justify-center bg-[#f3f5f9]" id="loginPage">
+  <div class="w-[90%] max-w-[400px] rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-[0_18px_60px_rgba(34,48,80,0.10)]">
+    <div class="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[#3157d5] text-white shadow-lg shadow-blue-200">
+      <iconify-icon icon="solar:book-bookmark-bold" width="24"></iconify-icon>
+    </div>
+    <h1 class="text-[20px] font-bold tracking-tight text-slate-900">知识库客服</h1>
+    <p class="mt-2 mb-8 text-[14px] text-slate-400">使用 GitHub 账号登录后开始对话</p>
+    <button
+      class="flex w-full items-center justify-center gap-2 rounded-xl bg-[#24292e] px-4 py-3 text-[14px] font-semibold text-white transition hover:bg-[#1a1e22] active:scale-[0.98]"
+      onclick="loginWithGithub()"
+    >
+      <svg class="h-5 w-5 fill-current" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
       GitHub 登录
     </button>
   </div>
 </div>
 
-<!-- 移动端遮罩 -->
 <div class="mobile-overlay" id="mobileOverlay" onclick="closeSidebar()"></div>
 
-<!-- 主应用界面 -->
-<div id="appContainer" style="display:none; width:100%; height:100%;">
-  <!-- 左侧侧边栏 -->
-  <div class="sidebar">
-    <button class="mobile-close-btn" onclick="closeSidebar()">✕</button>
-    <div class="sidebar-top-user">
-      <div class="user-avatar" id="userAvatar">U</div>
-      <div class="user-name" id="userName">登录用户</div>
-      <button class="logout-btn" onclick="logout()">登出</button>
+<!-- 主应用 -->
+<div id="appContainer" class="app-shell mx-auto min-h-screen w-full max-w-[1440px] bg-white shadow-[0_18px_60px_rgba(34,48,80,0.10)]">
+
+  <aside class="sidebar flex w-[292px] flex-none flex-col border-r border-slate-200 bg-[#f8f9fc]">
+    <div class="flex items-center gap-3 border-b border-slate-200 px-6 py-5">
+      <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#3157d5] text-white shadow-lg shadow-blue-200">
+        <iconify-icon icon="solar:book-bookmark-bold" width="22"></iconify-icon>
+      </div>
+      <div>
+        <div class="text-[16px] font-bold tracking-tight text-slate-900">知识库客服</div>
+        <div class="mt-0.5 text-[11px] font-medium text-slate-400">企业文档智能助手</div>
+      </div>
+      <button class="ml-auto text-slate-400 md:hidden" onclick="closeSidebar()" aria-label="关闭侧边栏">
+        <iconify-icon icon="solar:close-circle-linear" width="22"></iconify-icon>
+      </button>
     </div>
 
-    <!-- 顺序调整：上传文档放在最上方 -->
-    <button class="upload-doc-btn" id="rebuildBtn">🔄 重建索引</button>
-    <button class="upload-doc-btn" id="uploadDocBtn">📄 添加知识库文档</button>
-    <div class="file-list" id="fileList"></div>
-    <button class="new-chat-btn" id="newChatBtn">＋ 新对话</button>
-
-    <div class="history-title">历史对话</div>
-    <div class="history-list" id="historyList"></div>
-  </div>
-
-  <!-- 右侧对话区域 -->
-  <div class="main-wrap">
-    <div class="header">
-      <button class="mobile-toggle-btn" onclick="toggleSidebar()">☰</button>
-      知识库客服
+    <div class="px-4 pt-5">
+      <button
+        id="newChatBtn"
+        class="flex w-full items-center justify-center gap-2 rounded-xl bg-[#3157d5] px-4 py-3 text-[13px] font-semibold text-white shadow-md shadow-blue-100 transition hover:bg-[#2649c0] active:scale-[0.98]"
+      >
+        <iconify-icon icon="solar:add-circle-bold" width="18"></iconify-icon>
+        新建对话
+      </button>
     </div>
-    <div class="messages" id="messages">
-      <div class="welcome" id="welcomeMsg">
-        <div class="welcome-icon">📚</div>
-        <div class="welcome-title">你好，我是知识库助手</div>
-        <div class="welcome-hint">可以问我关于文档的任何问题<br>比如"这个项目怎么部署？""有哪些技术栈？"</div>
+
+    <div class="mx-4 mt-4 rounded-xl border border-slate-200 bg-white p-3">
+      <div class="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+        <iconify-icon icon="solar:folder-with-files-linear" width="14"></iconify-icon>
+        知识库
+      </div>
+      <button
+        id="uploadDocBtn"
+        class="mb-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-[#f8f9fc] px-3 py-2 text-[12px] font-medium text-slate-600 transition hover:border-blue-300 hover:text-[#3157d5]"
+      >
+        <iconify-icon icon="solar:upload-minimalistic-linear" width="16"></iconify-icon>
+        添加文档
+      </button>
+      <button
+        id="rebuildBtn"
+        class="mb-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#eef2ff] px-3 py-2 text-[12px] font-medium text-[#3157d5] transition hover:bg-[#e0e7ff]"
+      >
+        <iconify-icon icon="solar:refresh-bold" width="15"></iconify-icon>
+        <span id="rebuildBtnText">重建索引</span>
+      </button>
+      <div id="fileList" class="scrollbar max-h-[120px] overflow-y-auto"></div>
+    </div>
+
+    <div class="px-5 pb-2 pt-5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">历史会话</div>
+    <div class="scrollbar flex-1 overflow-y-auto px-3 pb-5" id="historyList"></div>
+
+    <div class="border-t border-slate-200 p-4">
+      <div class="flex items-center gap-3 rounded-xl px-2 py-2">
+        <div id="userAvatar" class="flex h-9 w-9 flex-none items-center justify-center overflow-hidden rounded-full bg-[#dce5ff] text-[12px] font-bold text-[#3157d5]">U</div>
+        <div class="min-w-0 flex-1">
+          <div id="userName" class="truncate text-[13px] font-semibold text-slate-800">用户</div>
+          <div class="text-[11px] text-slate-400">个人工作区</div>
+        </div>
+        <button onclick="logout()" aria-label="退出登录" class="text-slate-400 transition hover:text-slate-700" title="退出登录">
+          <iconify-icon icon="solar:logout-2-linear" width="18"></iconify-icon>
+        </button>
       </div>
     </div>
+  </aside>
 
-    <div class="input-wrap">
-      <div class="input-box">
-        <textarea id="userInput" placeholder="输入问题，回车发送，Shift+Enter换行"></textarea>
-        <button onclick="send()">发送</button>
+  <main class="flex min-w-0 flex-1 flex-col bg-white">
+    <header class="flex h-[76px] flex-none items-center justify-between border-b border-slate-200 px-4 md:px-10">
+      <div class="flex min-w-0 items-center gap-3">
+        <button class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 md:hidden" onclick="toggleSidebar()" aria-label="打开菜单">
+          <iconify-icon icon="solar:hamburger-menu-linear" width="22"></iconify-icon>
+        </button>
+        <div class="min-w-0">
+          <div class="flex items-center gap-2">
+            <h1 id="chatTitle" class="truncate text-[18px] font-bold tracking-tight text-slate-900">新对话</h1>
+            <span class="hidden rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-600 sm:inline">AI 在线</span>
+          </div>
+          <div id="chatSubtitle" class="mt-1 text-[12px] text-slate-400">对话内容已自动保存</div>
+        </div>
       </div>
-    </div>
-  </div>
+      <div class="flex items-center gap-2">
+        <button onclick="document.getElementById('uploadDocBtn').click()" aria-label="上传文档" class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700" title="上传知识库文档">
+          <iconify-icon icon="solar:paperclip-linear" width="19"></iconify-icon>
+        </button>
+      </div>
+    </header>
+
+    <section class="scrollbar flex-1 overflow-y-auto px-4 py-6 md:px-10 md:py-8" id="messages">
+      <div class="mx-auto max-w-[820px]" id="messageInner">
+        <div class="welcome flex flex-col items-center justify-center py-16 text-center" id="welcomeMsg">
+          <div class="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#3157d5] text-white shadow-lg shadow-blue-200">
+            <iconify-icon icon="solar:stars-minimalistic-bold" width="28"></iconify-icon>
+          </div>
+          <div class="text-[18px] font-bold text-slate-800">你好，我是知识库助手</div>
+          <div class="mt-2 max-w-[420px] text-[14px] leading-7 text-slate-400">
+            可以问我关于文档的任何问题<br>比如「这个项目怎么部署？」「有哪些技术栈？」
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="flex-none px-4 pb-6 pt-2 md:px-10 md:pb-7">
+      <div class="mx-auto max-w-[820px]">
+        <div class="mb-3 flex flex-wrap gap-2" id="suggestionBar">
+          <button type="button" class="suggestion rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-500 transition hover:border-blue-300 hover:text-[#3157d5]">这个项目怎么部署？</button>
+          <button type="button" class="suggestion rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-500 transition hover:border-blue-300 hover:text-[#3157d5]">有哪些技术栈？</button>
+          <button type="button" class="suggestion rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-500 transition hover:border-blue-300 hover:text-[#3157d5]">总结知识库内容</button>
+        </div>
+        <div class="rounded-2xl border border-slate-300 bg-white p-2 shadow-[0_8px_24px_rgba(31,49,91,0.08)] focus-within:border-[#3157d5] focus-within:ring-4 focus-within:ring-blue-50">
+          <textarea
+            id="userInput"
+            rows="2"
+            class="w-full resize-none border-0 bg-transparent px-3 py-2 text-[14px] leading-6 text-slate-800 outline-none placeholder:text-slate-400"
+            placeholder="输入你的问题，按 Enter 发送，Shift + Enter 换行"
+          ></textarea>
+          <div class="flex items-center justify-between px-2 pb-1">
+            <div class="flex items-center gap-1">
+              <button type="button" onclick="document.getElementById('uploadDocBtn').click()" aria-label="添加附件" class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
+                <iconify-icon icon="solar:paperclip-linear" width="18"></iconify-icon>
+              </button>
+              <span class="ml-2 hidden text-[11px] text-slate-400 sm:inline">知识库检索 · 流式回答</span>
+            </div>
+            <button
+              id="sendBtn"
+              type="button"
+              onclick="send()"
+              class="flex items-center gap-2 rounded-xl bg-[#3157d5] px-4 py-2 text-[12px] font-semibold text-white transition hover:bg-[#2649c0] active:scale-[0.98]"
+            >
+              <span>发送</span>
+              <iconify-icon icon="solar:arrow-up-linear" width="16"></iconify-icon>
+            </button>
+          </div>
+        </div>
+        <div class="mt-3 text-center text-[10px] text-slate-400">AI 生成内容可能存在偏差，请结合知识库原文判断</div>
+      </div>
+    </footer>
+  </main>
 </div>
 
 <script>
-// ========= 全局状态 =========
 let currentUser = null;
-
 const msgs = document.getElementById("messages");
+const messageInner = document.getElementById("messageInner");
 const historyList = document.getElementById("historyList");
 const newChatBtn = document.getElementById("newChatBtn");
 const rebuildBtn = document.getElementById("rebuildBtn");
 const uploadDocBtn = document.getElementById("uploadDocBtn");
+const chatTitle = document.getElementById("chatTitle");
 
 let threadId = Math.random().toString(36).slice(2);
 let abortController = null;
 let chatHistory = [];
 
-// ========= 登录相关 =========
+marked.setOptions({ breaks: false, gfm: true });
+
+function userInitial() {
+  if (!currentUser || !currentUser.username) return "U";
+  return currentUser.username.charAt(0).toUpperCase();
+}
+
+function userAvatarHtml() {
+  if (currentUser && currentUser.avatar_url) {
+    return `<img src="${currentUser.avatar_url}" alt="avatar" class="h-full w-full object-cover">`;
+  }
+  return userInitial();
+}
+
+function formatRelativeTime(iso) {
+  if (!iso) return "";
+  try {
+    const t = new Date(iso).getTime();
+    const diff = Date.now() - t;
+    if (diff < 60_000) return "刚刚";
+    if (diff < 3600_000) return Math.floor(diff / 60_000) + "分钟前";
+    if (diff < 86400_000) return Math.floor(diff / 3600_000) + "小时前";
+    if (diff < 172800_000) return "昨天";
+    return new Date(iso).toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
+  } catch {
+    return "";
+  }
+}
+
+function nowClock() {
+  const d = new Date();
+  return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+}
 
 async function checkLoginStatus() {
   try {
     const resp = await fetch("/api/auth/me");
     const data = await resp.json();
-
     if (data.logged_in && data.user) {
       currentUser = data.user;
       showAppPage();
@@ -498,63 +312,50 @@ async function checkLoginStatus() {
   }
 }
 
-// 显示登录页面
 function showLoginPage() {
-  document.getElementById('loginPage').classList.remove('hidden');
-  document.getElementById('appContainer').style.display = 'none';
+  document.getElementById("loginPage").classList.remove("hidden");
+  document.getElementById("appContainer").classList.remove("show");
 }
 
-// 显示应用页面
 function showAppPage() {
-  document.getElementById('loginPage').classList.add('hidden');
-  document.getElementById('appContainer').style.display = 'flex';
-  
-  // 更新用户信息
+  document.getElementById("loginPage").classList.add("hidden");
+  document.getElementById("appContainer").classList.add("show");
+
   if (currentUser) {
-    const avatarEl = document.getElementById('userAvatar');
-    const nameEl = document.getElementById('userName');
-    
+    const avatarEl = document.getElementById("userAvatar");
+    const nameEl = document.getElementById("userName");
     if (currentUser.avatar_url) {
-      avatarEl.innerHTML = `<img src="${currentUser.avatar_url}" alt="avatar">`;
+      avatarEl.innerHTML = `<img src="${currentUser.avatar_url}" alt="avatar" class="h-full w-full object-cover">`;
     } else {
-      avatarEl.textContent = currentUser.username.charAt(0).toUpperCase();
+      avatarEl.textContent = userInitial();
     }
     nameEl.textContent = currentUser.username;
   }
-  
-  // 初始化应用
+
   loadConversations().then(() => renderHistory());
   checkKBStatus();
 }
 
-// GitHub 登录
 async function loginWithGithub() {
   try {
-    const resp = await fetch('/api/auth/github');
+    const resp = await fetch("/api/auth/github");
     const data = await resp.json();
-    
-    if (data.auth_url) {
-      window.location.href = data.auth_url;
-    }
+    if (data.auth_url) window.location.href = data.auth_url;
   } catch (e) {
-    alert('登录失败，请重试');
+    alert("登录失败，请重试");
   }
 }
 
-// 登出
 async function logout() {
   await fetch("/api/auth/logout", { method: "POST" });
   currentUser = null;
   showLoginPage();
 }
 
-// ========= 聊天相关 =========
-
-// 添加知识库文档点击事件
-uploadDocBtn.onclick = function(){
+uploadDocBtn.onclick = function () {
   const input = document.createElement("input");
   input.type = "file";
-  input.accept = ".txt,.md";
+  input.accept = ".txt,.md,.csv,.json";
   input.multiple = true;
   input.onchange = async () => {
     for (const f of input.files) {
@@ -563,12 +364,60 @@ uploadDocBtn.onclick = function(){
       await fetch("/api/kb/upload", { method: "POST", body: form });
     }
     checkKBStatus();
-    alert("已上传 " + input.files.length + " 个文件，点击\"重建索引\"生效。");
+    alert("已上传 " + input.files.length + " 个文件，点击「重建索引」生效。");
   };
   input.click();
 };
 
-// 从后端加载对话列表
+rebuildBtn.onclick = async function () {
+  const label = document.getElementById("rebuildBtnText");
+  if (label) label.textContent = "重建中...";
+  await fetch("/api/kb/rebuild", { method: "POST" });
+  checkKBStatus();
+};
+
+async function checkKBStatus() {
+  try {
+    const r = await fetch("/api/kb/status");
+    const d = await r.json();
+    const label = document.getElementById("rebuildBtnText");
+    if (label) {
+      label.textContent = "重建索引 (" + d.file_count + "个" + (d.has_index ? " ✓" : "") + ")";
+    }
+    renderFileList(d.files || []);
+  } catch (e) {}
+}
+
+function renderFileList(files) {
+  const list = document.getElementById("fileList");
+  if (!list) return;
+  list.innerHTML = "";
+  if (!files.length) {
+    list.innerHTML = '<div class="px-1 py-1 text-[11px] text-slate-400">暂无文档</div>';
+    return;
+  }
+  files.forEach((name) => {
+    const item = document.createElement("div");
+    item.className = "group flex items-center justify-between gap-2 rounded-md px-1 py-1 text-[11px] text-slate-500 hover:bg-slate-50";
+    const span = document.createElement("span");
+    span.className = "min-w-0 truncate";
+    span.title = name;
+    span.textContent = name;
+    const del = document.createElement("button");
+    del.className = "shrink-0 text-slate-300 opacity-0 transition group-hover:opacity-100 hover:text-red-500";
+    del.title = "删除";
+    del.innerHTML = '<iconify-icon icon="solar:trash-bin-minimalistic-linear" width="14"></iconify-icon>';
+    del.onclick = async () => {
+      if (!confirm("删除 " + name + "？")) return;
+      await fetch("/api/kb/files/" + encodeURIComponent(name), { method: "DELETE" });
+      checkKBStatus();
+    };
+    item.appendChild(span);
+    item.appendChild(del);
+    list.appendChild(item);
+  });
+}
+
 async function loadConversations() {
   try {
     const resp = await fetch("/api/conversations");
@@ -579,58 +428,177 @@ async function loadConversations() {
   }
 }
 
-// 渲染侧边历史列表
-function renderHistory(){
+function renderHistory() {
   historyList.innerHTML = "";
-  chatHistory.forEach((item)=>{
-    const div = document.createElement("div");
-    div.className = "history-item" + (item.thread_id === threadId ? " active" : "");
-    div.textContent = item.title || "未命名";
-    div.title = item.title;
-    div.onclick = ()=>switchChat(item.thread_id);
-    historyList.appendChild(div);
+  if (!chatHistory.length) {
+    historyList.innerHTML = '<div class="px-3 py-2 text-[12px] text-slate-400">暂无历史会话</div>';
+    return;
+  }
+  chatHistory.forEach((item) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className =
+      "conversation flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-slate-100" +
+      (item.thread_id === threadId ? " active" : "");
+    btn.innerHTML =
+      '<iconify-icon class="flex-none text-slate-400" icon="solar:chat-round-dots-linear" width="18"></iconify-icon>' +
+      '<span class="conv-title min-w-0 flex-1 truncate text-[13px] font-medium text-slate-600"></span>' +
+      '<span class="shrink-0 text-[10px] text-slate-400"></span>';
+    btn.querySelector(".conv-title").textContent = item.title || "未命名对话";
+    btn.querySelector("span:last-child").textContent = formatRelativeTime(item.updated_at);
+    btn.onclick = () => switchChat(item.thread_id);
+    historyList.appendChild(btn);
   });
+  updateChatHeader();
 }
 
-// 切换会话
-async function switchChat(tid){
-  threadId = tid;
-  msgs.innerHTML = "";
-  showWelcome();
+function updateChatHeader() {
+  const cur = chatHistory.find((c) => c.thread_id === threadId);
+  chatTitle.textContent = (cur && cur.title) || "新对话";
+}
 
+async function switchChat(tid) {
+  closeSidebar();
+  threadId = tid;
+  clearMessages(false);
   try {
     const resp = await fetch("/api/conversations/" + tid);
     const data = await resp.json();
-    if ((data.messages || []).length > 0) {
-      for (const m of data.messages) {
+    const list = data.messages || [];
+    if (list.length > 0) {
+      for (const m of list) {
         addMsg(m.role === "human" ? "user" : "ai", m.content);
       }
+    } else {
+      showWelcome();
     }
-  } catch (e) {}
+  } catch (e) {
+    showWelcome();
+  }
   renderHistory();
 }
 
-// 移动端侧边栏开关
-function toggleSidebar(){
+function startNewChat() {
+  closeSidebar();
+  threadId = Math.random().toString(36).slice(2);
+  clearMessages(true);
+  renderHistory();
+  document.getElementById("userInput").focus();
+}
+
+newChatBtn.onclick = startNewChat;
+
+function toggleSidebar() {
   document.querySelector(".sidebar").classList.toggle("mobile-open");
   document.getElementById("mobileOverlay").classList.toggle("show");
 }
-function closeSidebar(){
+function closeSidebar() {
   document.querySelector(".sidebar").classList.remove("mobile-open");
   document.getElementById("mobileOverlay").classList.remove("show");
 }
-// 切对话/新对话时关侧边栏
-const _origSwitch = switchChat;
-switchChat = function(tid){ closeSidebar(); _origSwitch(tid); };
-const _origNew = newChatBtn.onclick;
-newChatBtn.onclick = function(){ closeSidebar(); _origNew(); };
 
-// 新建对话
-newChatBtn.onclick = function(){
-  threadId = Math.random().toString(36).slice(2);
-  msgs.innerHTML = "";
-  showWelcome();
-  renderHistory();
+function hideWelcome() {
+  const w = document.getElementById("welcomeMsg");
+  if (w) w.style.display = "none";
+}
+function showWelcome() {
+  const w = document.getElementById("welcomeMsg");
+  if (w) w.style.display = "flex";
+}
+function clearMessages(showWel) {
+  messageInner.innerHTML = "";
+  const welcome = document.createElement("div");
+  welcome.id = "welcomeMsg";
+  welcome.className = "welcome flex flex-col items-center justify-center py-16 text-center";
+  welcome.innerHTML =
+    '<div class="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#3157d5] text-white shadow-lg shadow-blue-200">' +
+    '<iconify-icon icon="solar:stars-minimalistic-bold" width="28"></iconify-icon></div>' +
+    '<div class="text-[18px] font-bold text-slate-800">你好，我是知识库助手</div>' +
+    '<div class="mt-2 max-w-[420px] text-[14px] leading-7 text-slate-400">' +
+    "可以问我关于文档的任何问题<br>比如「这个项目怎么部署？」「有哪些技术栈？」</div>";
+  messageInner.appendChild(welcome);
+  if (!showWel) hideWelcome();
+  else showWelcome();
+  chatTitle.textContent = "新对话";
+}
+
+function addMsg(role, text) {
+  hideWelcome();
+  const wrap = document.createElement("div");
+  wrap.className = "message-enter mb-7 flex gap-3 " + (role === "user" ? "justify-end" : "items-start");
+  const clock = nowClock();
+
+  if (role === "user") {
+    wrap.innerHTML =
+      '<div class="max-w-[600px]">' +
+      '<div class="mb-1.5 flex justify-end gap-2">' +
+      '<span class="text-[10px] text-slate-400">' + clock + "</span>" +
+      '<span class="text-[12px] font-bold text-slate-800">我</span></div>' +
+      '<div class="user-bubble rounded-2xl rounded-tr-md bg-[#3157d5] px-5 py-4 text-[14px] leading-7 text-white shadow-sm whitespace-pre-wrap"></div></div>' +
+      '<div class="user-side-avatar flex h-8 w-8 flex-none items-center justify-center overflow-hidden rounded-full bg-[#dce5ff] text-[12px] font-bold text-[#3157d5]"></div>';
+    wrap.querySelector(".user-bubble").textContent = text;
+    wrap.querySelector(".user-side-avatar").innerHTML = userAvatarHtml();
+    messageInner.appendChild(wrap);
+    msgs.scrollTop = msgs.scrollHeight;
+    return wrap.querySelector(".user-bubble");
+  }
+
+  wrap.innerHTML =
+    '<div class="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[#3157d5] text-white">' +
+    '<iconify-icon icon="solar:stars-minimalistic-bold" width="17"></iconify-icon></div>' +
+    '<div class="max-w-[680px] min-w-0 flex-1">' +
+    '<div class="mb-1.5 flex items-center gap-2">' +
+    '<span class="text-[12px] font-bold text-slate-800">知识库助手</span>' +
+    '<span class="text-[10px] text-slate-400">' + clock + "</span></div>" +
+    '<div class="ai-content rounded-2xl rounded-tl-md border border-slate-200 bg-[#f7f8fb] px-5 py-4 text-[14px] leading-7 text-slate-700"></div>' +
+    '<div class="ai-actions mt-2 flex gap-3 text-[11px] text-slate-400"></div></div>';
+
+  const content = wrap.querySelector(".ai-content");
+  content.innerHTML = marked.parse(text || "");
+  content.dataset.raw = text || "";
+
+  const actions = wrap.querySelector(".ai-actions");
+  const copyBtn = document.createElement("button");
+  copyBtn.type = "button";
+  copyBtn.className = "flex items-center gap-1 hover:text-[#3157d5]";
+  copyBtn.innerHTML = '<iconify-icon icon="solar:copy-linear" width="14"></iconify-icon>复制';
+  copyBtn.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    const raw = content.dataset.raw || text || "";
+    try {
+      await navigator.clipboard.writeText(raw);
+      copyBtn.innerHTML = '<iconify-icon icon="solar:check-circle-linear" width="14"></iconify-icon>已复制';
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = raw;
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      copyBtn.innerHTML = '<iconify-icon icon="solar:check-circle-linear" width="14"></iconify-icon>已复制';
+    }
+    setTimeout(() => {
+      copyBtn.innerHTML = '<iconify-icon icon="solar:copy-linear" width="14"></iconify-icon>复制';
+    }, 1500);
+  });
+  actions.appendChild(copyBtn);
+
+  messageInner.appendChild(wrap);
+  msgs.scrollTop = msgs.scrollHeight;
+  return content;
+}
+
+function addToolHint() {
+  const wrap = document.createElement("div");
+  wrap.className = "mb-3 flex items-center gap-2 pl-11 text-[12px] text-slate-400";
+  wrap.innerHTML =
+    '<iconify-icon icon="solar:widget-2-linear" width="14" class="text-[#3157d5]"></iconify-icon>' +
+    "<span>正在检索知识库...</span>";
+  messageInner.appendChild(wrap);
+  msgs.scrollTop = msgs.scrollHeight;
+  return wrap;
 }
 
 async function send() {
@@ -646,66 +614,77 @@ async function send() {
   addMsg("user", text);
   input.value = "";
 
-  // 新对话：先刷新侧边栏
-  const exist = chatHistory.find(c=>c.thread_id === threadId);
-  if(!exist){
+  const exist = chatHistory.find((c) => c.thread_id === threadId);
+  if (!exist) {
     chatHistory.unshift({
-      title: text.slice(0,22) + (text.length>22?"...":""),
-      thread_id: threadId
+      title: text.slice(0, 22) + (text.length > 22 ? "..." : ""),
+      thread_id: threadId,
+      updated_at: new Date().toISOString(),
     });
     renderHistory();
   }
+  chatTitle.textContent = exist ? exist.title || "对话" : chatHistory[0].title;
 
   const aiDiv = addMsg("ai", "");
   let fullText = "";
   let toolShown = false;
-
   abortController = new AbortController();
 
   try {
     const resp = await fetch("/api/chat", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({message: text, thread_id: threadId}),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: text, thread_id: threadId }),
       signal: abortController.signal,
     });
+
+    if (!resp.ok) {
+      let err = "请求失败 (" + resp.status + ")";
+      try {
+        const j = await resp.json();
+        err = j.error || j.detail || err;
+      } catch (_) {}
+      aiDiv.textContent = "出错了：" + err;
+      return;
+    }
 
     const reader = resp.body.getReader();
     const dec = new TextDecoder();
     let buf = "";
-
     let end = false;
+
     while (!end) {
-      const {done, value} = await reader.read();
+      const { done, value } = await reader.read();
       if (done) break;
-      buf += dec.decode(value, {stream: true});
+      buf += dec.decode(value, { stream: true });
 
-      for (const line of buf.split("\n")) {
+      const parts = buf.split("\n");
+      buf = parts.pop() || "";
+
+      for (const line of parts) {
         if (!line.startsWith("data: ")) continue;
-        const json = JSON.parse(line.slice(6));
-
-        if (json.error) {
-          aiDiv.textContent = "出错了：" + json.error;
+        let json;
+        try {
+          json = JSON.parse(line.slice(6));
+        } catch {
+          continue;
         }
+
+        if (json.error) aiDiv.textContent = "出错了：" + json.error;
         if (json.tool && !toolShown) {
           toolShown = true;
-          const toolWrap = document.createElement("div");
-          toolWrap.className = "tool-wrap";
-          const toolDiv = document.createElement("div");
-          toolDiv.className = "tool";
-          toolDiv.textContent = "🔧 正在调用工具...";
-          toolWrap.appendChild(toolDiv);
-          msgs.appendChild(toolWrap);
+          addToolHint();
         }
         if (json.text) {
           fullText += json.text;
           aiDiv.innerHTML = marked.parse(fullText);
+          aiDiv.dataset.raw = fullText;
         }
-        if (json.done) { end = true; break; }
+        if (json.done) {
+          end = true;
+          break;
+        }
       }
-      buf = buf.split("\n").pop() || "";
       msgs.scrollTop = msgs.scrollHeight;
     }
   } catch (e) {
@@ -715,128 +694,24 @@ async function send() {
   }
 
   abortController = null;
-
-  // 刷新侧边栏对话列表（获取后端自动标题）
   loadConversations().then(() => renderHistory());
 }
 
-// Markdown 渲染配置
-marked.setOptions({ breaks: false, gfm: true });
-
-function hideWelcome() {
-  const w = document.getElementById("welcomeMsg");
-  if (w) w.style.display = "none";
-}
-function showWelcome() {
-  const w = document.getElementById("welcomeMsg");
-  if (w) w.style.display = "flex";
-}
-
-function addMsg(role, text) {
-  hideWelcome();
-  const wrap = document.createElement("div");
-  wrap.className = "msg-wrap " + role;
-
-  const msg = document.createElement("div");
-  msg.className = "msg";
-  // AI 消息 MD 渲染，用户消息纯文本
-  if (role === "ai") {
-    msg.innerHTML = marked.parse(text);
-  } else {
-    msg.textContent = text;
-  }
-  wrap.appendChild(msg);
-
-  // AI 消息加复制按钮
-  if (role === "ai") {
-    const btn = document.createElement("button");
-    btn.className = "copy-btn";
-    btn.textContent = "📋";
-    btn.title = "复制回复";
-    btn.addEventListener("click", async (e) => {
-      e.stopPropagation();
-      try {
-        await navigator.clipboard.writeText(text);
-        btn.textContent = "✓";
-        btn.style.color = "#10b981";
-      } catch {
-        // 降级方案
-        const ta = document.createElement("textarea");
-        ta.value = text;
-        ta.style.position = "fixed"; ta.style.left = "-9999px";
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand("copy");
-        document.body.removeChild(ta);
-        btn.textContent = "✓";
-      }
-      setTimeout(() => {
-        btn.textContent = "📋";
-        btn.style.color = "";
-      }, 1500);
-    });
-    wrap.appendChild(btn);
-  }
-
-  msgs.appendChild(wrap);
-  msgs.scrollTop = msgs.scrollHeight;
-  return msg;
-}
-
-// 回车发送 Shift+Enter换行
-document.getElementById('userInput').addEventListener('keydown', function(e){
-  if(e.key === 'Enter' && !e.shiftKey){
+document.getElementById("userInput").addEventListener("keydown", function (e) {
+  if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
     send();
   }
-})
+});
 
-async function checkKBStatus() {
-  try {
-    const r = await fetch("/api/kb/status");
-    const d = await r.json();
-    const btn = document.getElementById("rebuildBtn");
-    if (btn) {
-      btn.textContent = "🔄 重建索引 (" + d.file_count + "个文档" + (d.has_index ? " ✅" : " ❌") + ")";
-    }
-    renderFileList(d.files || []);
-  } catch(e) {}
-}
-
-function renderFileList(files) {
-  const list = document.getElementById("fileList");
-  if (!list) return;
-  list.innerHTML = "";
-  if (!files.length) {
-    list.innerHTML = '<div style="font-size:11px;color:#6b7280;padding:4px 8px;">暂无文档</div>';
-    return;
-  }
-  files.forEach(name => {
-    const item = document.createElement("div");
-    item.className = "file-item";
-    item.innerHTML = '<span title="' + name + '">📄 ' + name + '</span>';
-
-    const del = document.createElement("button");
-    del.className = "del-btn";
-    del.textContent = "×";
-    del.title = "删除";
-    del.onclick = async () => {
-      if (!confirm("删除 " + name + "？")) return;
-      await fetch("/api/kb/files/" + encodeURIComponent(name), { method: "DELETE" });
-      checkKBStatus();
-    };
-    item.appendChild(del);
-    list.appendChild(item);
+document.querySelectorAll(".suggestion").forEach(function (button) {
+  button.addEventListener("click", function () {
+    const input = document.getElementById("userInput");
+    input.value = button.textContent;
+    input.focus();
   });
-}
+});
 
-rebuildBtn.onclick = async function() {
-  rebuildBtn.textContent = "⏳ 重建中...";
-  await fetch("/api/kb/rebuild", { method: "POST" });
-  checkKBStatus();
-};
-
-// ========= 初始化 =========
 checkLoginStatus();
 </script>
 </body>

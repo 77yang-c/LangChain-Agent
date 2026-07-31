@@ -5,3 +5,5 @@
 2026-07-27 18:21:39,924 | INFO | GET /api/auth/github | anonymous | 0ms
 2026-07-31 20:04:30,136 | WARNING | Python-dotenv could not parse statement starting at line 20
 2026-07-31 20:04:50,714 | INFO | langchain-openai detected system proxy configuration and no explicit `http_socket_options` / `http_client` / `http_async_client` / `openai_proxy`; skipping the custom `httpx` transport so httpx's env-proxy auto-detection applies. Pass `http_socket_options=[...]` to opt back into kernel-level TCP keepalive tuning on top of the env proxy.
+2026-07-31 20:14:16,436 | WARNING | Python-dotenv could not parse statement starting at line 20
+2026-07-31 20:14:19,316 | INFO | langchain-openai detected system proxy configuration and no explicit `http_socket_options` / `http_client` / `http_async_client` / `openai_proxy`; skipping the custom `httpx` transport so httpx's env-proxy auto-detection applies. Pass `http_socket_options=[...]` to opt back into kernel-level TCP keepalive tuning on top of the env proxy.
