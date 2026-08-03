@@ -2,7 +2,6 @@
 
 import json
 import os
-import sqlite3
 import time
 import secrets
 import logging
@@ -18,7 +17,7 @@ logger = logging.getLogger(__name__)
 from fastapi import FastAPI, Request, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.checkpoint.memory import MemorySaver
 from langchain.agents import create_agent
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import AIMessage, AIMessageChunk
@@ -26,7 +25,7 @@ from langchain_core.messages import AIMessage, AIMessageChunk
 from src.utlist.config import get_config
 from src.tools.tools import SAFE_TOOLS
 from src.tools.rag import init_retriever, set_kb_user, reset_kb_user, has_user_index, clear_user_index
-from src.models.user import upsert_user, create_session, get_user_by_session, DB_DIR
+from src.models.user import upsert_user, create_session, get_user_by_session
 from src.auth.github_oauth import get_github_auth_url, exchange_code_for_token, get_github_user, get_github_user_email
 from src.models.conversation import save_message, get_conversations, get_messages
 from src.models.documents import save_document, delete_document, get_documents
@@ -49,14 +48,8 @@ llm = ChatOpenAI(
     streaming=True,
 )
 
-# Agent 上下文持久化到 SQLite（重启可恢复；thread 按用户隔离）
-DB_DIR.mkdir(parents=True, exist_ok=True)
-_ckpt_conn = sqlite3.connect(
-    str(DB_DIR / "checkpoints.db"),
-    check_same_thread=False,
-)
-memory = SqliteSaver(_ckpt_conn)
-memory.setup()
+# Agent 上下文（内存模式，对话历史已通过 conversations 表持久化）
+memory = MemorySaver()
 
 agent = create_agent(
     model=llm,
