@@ -17,3 +17,6 @@ httpx>=0.25.0
 fastapi>=0.100.0
 uvicorn>=0.20.0
 python-multipart>=0.0.5
+
+#pdf处理
+pypdf>=4.0.0.0

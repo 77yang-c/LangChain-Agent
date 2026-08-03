@@ -111,7 +111,7 @@
 <div class="mobile-overlay" id="mobileOverlay" onclick="closeSidebar()"></div>
 
 <!-- 主应用 -->
-<div id="appContainer" class="app-shell mx-auto min-h-screen w-full max-w-[1440px] bg-white shadow-[0_18px_60px_rgba(34,48,80,0.10)]">
+<div id="appContainer" class="app-shell min-h-screen w-full bg-white">
 
   <aside class="sidebar flex w-[292px] flex-none flex-col border-r border-slate-200 bg-[#f8f9fc]">
     <div class="flex items-center gap-3 border-b border-slate-200 px-6 py-5">
@@ -355,7 +355,7 @@ async function logout() {
 uploadDocBtn.onclick = function () {
   const input = document.createElement("input");
   input.type = "file";
-  input.accept = ".txt,.md,.csv,.json";
+  input.accept = ".txt,.md,.csv,.json,.pdf";
   input.multiple = true;
   input.onchange = async () => {
     for (const f of input.files) {

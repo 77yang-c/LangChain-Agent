@@ -1,6 +1,6 @@
 # 基于 LangChain 架构的企业知识库客服
 
-> 在线地址：https://shadows-mount-singer-suppose.trycloudflare.com
+> 在线地址：http://118.25.103.245:8000
 
 ## 一、LangChain 架构概览
 

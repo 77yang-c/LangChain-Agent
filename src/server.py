@@ -281,8 +281,8 @@ async def chat(request: Request):
 
 # --- 知识库管理（按用户隔离）---
 
-ALLOWED_EXT = {".txt", ".md", ".csv", ".json"}
-MAX_SIZE_MB = 5
+ALLOWED_EXT = {".txt", ".md", ".csv", ".json",".pdf"}
+MAX_SIZE_MB = 10
 
 
 @app.get("/api/kb/status")
@@ -322,7 +322,16 @@ async def kb_upload(request: Request, file: UploadFile = File(...)):
     if len(content) > MAX_SIZE_MB * 1024 * 1024:
         return JSONResponse({"error": f"文件过大，最大 {MAX_SIZE_MB}MB"}, status_code=400)
 
-    text = content.decode("utf-8", errors="replace")
+    #根据文件类型提取脚本
+    if ext == ".pdf":
+        from io import BytesIO
+        from pypdf import PdfReader
+        reader = PdfReader(BytesIO(content))
+        text= "\n".join(
+            page.extract_text() or "" for page in reader.pages
+        )
+    else:
+        text = content.decode("utf-8", errors="replace")
     save_document(user["id"], filename, text)
     # 文档变更后旧索引失效
     clear_user_index(user["id"])

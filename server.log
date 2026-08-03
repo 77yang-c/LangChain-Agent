@@ -12,3 +12,41 @@
 2026-07-31 21:01:47,514 | INFO | GET / | anonymous | 85ms
 2026-07-31 21:01:49,528 | INFO | GET /favicon.ico | anonymous | 2ms
 2026-07-31 21:01:50,918 | INFO | GET /api/auth/github | anonymous | 8ms
+2026-08-03 14:53:34,793 | WARNING | Python-dotenv could not parse statement starting at line 20
+2026-08-03 14:53:55,167 | INFO | langchain-openai detected system proxy configuration and no explicit `http_socket_options` / `http_client` / `http_async_client` / `openai_proxy`; skipping the custom `httpx` transport so httpx's env-proxy auto-detection applies. Pass `http_socket_options=[...]` to opt back into kernel-level TCP keepalive tuning on top of the env proxy.
+2026-08-03 14:58:03,610 | INFO | GET / | anonymous | 84ms
+2026-08-03 14:58:04,282 | INFO | GET /api/auth/me | anonymous | 0ms
+2026-08-03 14:58:04,295 | INFO | GET /favicon.ico | anonymous | 2ms
+2026-08-03 14:58:05,117 | INFO | GET /api/auth/github | anonymous | 7ms
+2026-08-03 15:08:45,814 | INFO | langchain-openai detected system proxy configuration and no explicit `http_socket_options` / `http_client` / `http_async_client` / `openai_proxy`; skipping the custom `httpx` transport so httpx's env-proxy auto-detection applies. Pass `http_socket_options=[...]` to opt back into kernel-level TCP keepalive tuning on top of the env proxy.
+2026-08-03 15:12:25,383 | INFO | langchain-openai detected system proxy configuration and no explicit `http_socket_options` / `http_client` / `http_async_client` / `openai_proxy`; skipping the custom `httpx` transport so httpx's env-proxy auto-detection applies. Pass `http_socket_options=[...]` to opt back into kernel-level TCP keepalive tuning on top of the env proxy.
+2026-08-03 15:12:48,335 | INFO | GET /api/auth/me | anonymous | 0ms
+2026-08-03 15:12:49,321 | INFO | GET /api/auth/github | anonymous | 7ms
+2026-08-03 15:12:56,712 | INFO | HTTP Request: POST https://github.com/login/oauth/access_token "HTTP/1.1 200 OK"
+2026-08-03 15:12:58,472 | INFO | HTTP Request: GET https://api.github.com/user "HTTP/1.1 200 OK"
+2026-08-03 15:13:00,225 | INFO | HTTP Request: GET https://api.github.com/user/emails "HTTP/1.1 200 OK"
+2026-08-03 15:13:00,242 | INFO | GET /api/auth/github/callback | anonymous | 6341ms
+2026-08-03 15:13:00,335 | INFO | GET / | 77yang-c | 86ms
+2026-08-03 15:13:00,708 | INFO | GET /api/auth/me | 77yang-c | 3ms
+2026-08-03 15:13:00,721 | INFO | GET /api/conversations | 77yang-c | 5ms
+2026-08-03 15:13:00,729 | INFO | GET /api/kb/status | 77yang-c | 5ms
+2026-08-03 15:13:41,211 | INFO | GET /api/conversations/kqvrkdqkm6 | 77yang-c | 5ms
+2026-08-03 15:13:42,444 | INFO | GET /api/conversations/mwp1ct0verg | 77yang-c | 4ms
+2026-08-03 15:13:42,992 | INFO | GET /api/conversations/kqvrkdqkm6 | 77yang-c | 6ms
+2026-08-03 15:13:44,491 | INFO | GET /api/conversations/mwp1ct0verg | 77yang-c | 4ms
+2026-08-03 15:13:44,924 | INFO | GET /api/conversations/kqvrkdqkm6 | 77yang-c | 4ms
+2026-08-03 15:14:08,607 | INFO | POST /api/kb/upload | 77yang-c | 737ms
+2026-08-03 15:14:08,619 | INFO | GET /api/kb/status | 77yang-c | 4ms
+2026-08-03 15:14:19,402 | INFO | HTTP Request: POST https://open.bigmodel.cn/api/paas/v4/embeddings "HTTP/1.1 200 OK"
+2026-08-03 15:14:19,538 | INFO | POST /api/kb/rebuild | 77yang-c | 8743ms
+2026-08-03 15:14:19,547 | INFO | GET /api/kb/status | 77yang-c | 4ms
+2026-08-03 15:14:33,002 | INFO | HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-08-03 15:14:34,253 | INFO | POST /api/chat | 77yang-c | 1636ms
+2026-08-03 15:14:34,815 | INFO | HTTP Request: POST https://open.bigmodel.cn/api/paas/v4/embeddings "HTTP/1.1 200 OK"
+2026-08-03 15:14:35,184 | INFO | HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-08-03 15:14:39,240 | INFO | GET /api/conversations | 77yang-c | 5ms
+2026-08-03 15:14:54,690 | INFO | HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-08-03 15:14:56,385 | INFO | POST /api/chat | 77yang-c | 2028ms
+2026-08-03 15:14:56,972 | INFO | HTTP Request: POST https://open.bigmodel.cn/api/paas/v4/embeddings "HTTP/1.1 200 OK"
+2026-08-03 15:14:57,341 | INFO | HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-08-03 15:14:59,521 | INFO | GET /api/conversations | 77yang-c | 5ms
