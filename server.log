@@ -50,3 +50,52 @@
 2026-08-03 15:14:56,972 | INFO | HTTP Request: POST https://open.bigmodel.cn/api/paas/v4/embeddings "HTTP/1.1 200 OK"
 2026-08-03 15:14:57,341 | INFO | HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
 2026-08-03 15:14:59,521 | INFO | GET /api/conversations | 77yang-c | 5ms
+2026-08-26 22:39:50,668 | INFO | GET /api/health | anonymous | 1ms
+2026-08-29 08:58:42,533 | INFO | GET / | anonymous | 6ms
+2026-08-29 08:58:43,386 | INFO | GET /api/auth/me | anonymous | 2ms
+2026-08-29 08:58:43,392 | INFO | GET /favicon.ico | anonymous | 1ms
+2026-08-29 08:58:46,658 | INFO | GET /api/auth/github | anonymous | 9ms
+2026-08-29 08:59:17,477 | INFO | GET / | anonymous | 4ms
+2026-08-29 08:59:18,556 | INFO | GET /api/auth/me | anonymous | 1ms
+2026-08-29 08:59:18,571 | INFO | GET /favicon.ico | anonymous | 3ms
+2026-08-29 08:59:20,304 | INFO | GET /api/auth/github | anonymous | 11ms
+2026-08-29 08:59:51,701 | INFO | GET /api/auth/github | anonymous | 18ms
+2026-08-29 09:00:03,412 | INFO | GET /api/auth/github | anonymous | 15ms
+2026-08-29 09:00:24,089 | INFO | HTTP Request: POST https://github.com/login/oauth/access_token "HTTP/1.1 200 OK"
+2026-08-29 09:00:25,425 | INFO | HTTP Request: GET https://api.github.com/user "HTTP/1.1 200 OK"
+2026-08-29 09:00:26,745 | INFO | HTTP Request: GET https://api.github.com/user/emails "HTTP/1.1 200 OK"
+2026-08-29 09:00:26,764 | INFO | GET /api/auth/github/callback | anonymous | 3968ms
+2026-08-29 09:00:26,778 | INFO | GET / | 77yang-c | 1ms
+2026-08-29 09:00:26,982 | INFO | GET /api/auth/me | 77yang-c | 3ms
+2026-08-29 09:00:26,999 | INFO | GET /api/conversations | 77yang-c | 10ms
+2026-08-29 09:00:27,006 | INFO | GET /api/kb/status | 77yang-c | 5ms
+2026-08-29 09:01:21,085 | INFO | HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-08-29 09:01:22,806 | INFO | POST /api/chat | 77yang-c | 1985ms
+2026-08-29 09:01:23,166 | INFO | HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-08-29 09:01:25,098 | INFO | HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-08-29 09:01:26,657 | INFO | GET /api/conversations | 77yang-c | 5ms
+2026-08-29 09:05:44,413 | INFO | POST /api/kb/upload | 77yang-c | 258ms
+2026-08-29 09:05:44,432 | INFO | GET /api/kb/status | 77yang-c | 2ms
+2026-08-29 09:05:51,851 | INFO | HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 400 Bad Request"
+2026-08-29 09:05:51,922 | INFO | GET /api/kb/status | 77yang-c | 2ms
+2026-08-29 09:05:57,556 | INFO | HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-08-29 09:05:58,696 | INFO | POST /api/chat | 77yang-c | 1384ms
+2026-08-29 09:05:59,538 | INFO | HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 400 Bad Request"
+2026-08-29 09:05:59,698 | INFO | HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 400 Bad Request"
+2026-08-29 09:05:59,894 | INFO | HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 400 Bad Request"
+2026-08-29 09:06:00,110 | INFO | HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-08-29 09:06:01,322 | INFO | HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 400 Bad Request"
+2026-08-29 09:06:01,530 | INFO | HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-08-29 09:06:03,792 | INFO | GET /api/conversations | 77yang-c | 3ms
+2026-08-29 09:06:10,604 | INFO | HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 400 Bad Request"
+2026-08-29 09:06:10,629 | INFO | GET /api/kb/status | 77yang-c | 3ms
+2026-08-29 09:06:15,598 | INFO | HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-08-29 09:06:16,615 | INFO | POST /api/chat | 77yang-c | 1247ms
+2026-08-29 09:06:17,539 | INFO | HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 400 Bad Request"
+2026-08-29 09:06:17,550 | INFO | HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 400 Bad Request"
+2026-08-29 09:06:17,736 | INFO | HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-08-29 09:06:19,582 | INFO | HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 400 Bad Request"
+2026-08-29 09:06:19,883 | INFO | HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-08-29 09:06:21,699 | INFO | HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 400 Bad Request"
+2026-08-29 09:06:21,876 | INFO | HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-08-29 09:06:24,128 | INFO | GET /api/conversations | 77yang-c | 6ms

@@ -7,8 +7,14 @@ chain = prompt | llm | output_parser
 
 阶段三： create_react_agent 一条龙
 """
+import sys
+from pathlib import Path
+
+# 让 `python src/main.py` 直接运行也能解析 `src.*` 包导入（不依赖启动目录/PYTHONPATH）
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from langgraph.checkpoint.memory import MemorySaver #导入记忆模块
-from langchain.agents import create_agent
+from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import SystemMessage
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import AIMessage, AIMessageChunk
@@ -29,11 +35,11 @@ llm = ChatOpenAI(
 #Memory（跨轮记忆，thread_id隔离不同的用户）
 memory = MemorySaver()
 
-agent = create_agent(
+agent = create_react_agent(
     model=llm,
     tools=ALL_TOOLS,
     checkpointer=memory,
-    system_prompt = """你是一个智能助手，可以使用工具完成用户的任务。
+    prompt = """你是一个智能助手，可以使用工具完成用户的任务。
 
 ## 工具使用原则
 

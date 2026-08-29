@@ -1,11 +1,17 @@
 """企业知识库客服--FastAPI服务端"""
 
+from __future__ import annotations
+
 import json
 import os
+import sys
 import time
 import secrets
 import logging
 from pathlib import Path
+
+# 让 `python src/server.py` 直接运行也能解析 `src.*` 包导入（不依赖启动目录/PYTHONPATH）
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 logging.basicConfig(
     level=logging.INFO,
@@ -18,7 +24,7 @@ from fastapi import FastAPI, Request, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from langgraph.checkpoint.memory import MemorySaver
-from langchain.agents import create_agent
+from langgraph.prebuilt import create_react_agent
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import AIMessage, AIMessageChunk
 
@@ -51,11 +57,11 @@ llm = ChatOpenAI(
 # Agent 上下文（内存模式，对话历史已通过 conversations 表持久化）
 memory = MemorySaver()
 
-agent = create_agent(
+agent = create_react_agent(
     model=llm,
     tools=SAFE_TOOLS,
     checkpointer=memory,
-    system_prompt="""你是企业知识库客服助手。根据文档库内容回答用户问题。
+    prompt="""你是企业知识库客服助手。根据文档库内容回答用户问题。
 
 规则：
 - 优先使用 search_docs 搜索本地知识库

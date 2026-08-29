@@ -1,5 +1,7 @@
 """RAG 工具：按用户从 SQLite 加载文档 -> 切片 -> API 向量化 -> 检索"""
 
+from __future__ import annotations
+
 import logging
 import shutil
 from contextvars import ContextVar
@@ -39,6 +41,10 @@ def _get_embeddings():
         model=config.embedding_model,
         api_key=config.embedding_api_key or config.openai_api_key,
         base_url=config.embedding_base_url or config.base_url,
+        # 直接发送原文而非 token id（DashScope 兼容模式只接受字符串输入）
+        check_embedding_ctx_length=False,
+        # DashScope text-embedding-v4 单次请求最多 10 行
+        chunk_size=10,
     )
 
 
